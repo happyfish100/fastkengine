@@ -1,6 +1,7 @@
 
 FastKEngine is a knowledge engine.
 
+```
 knowledge format:
 
 [question]
@@ -70,3 +71,4 @@ for example:
 [answer]
   输出的是core dump文件位置
 
+```
