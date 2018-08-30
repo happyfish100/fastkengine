@@ -1,8 +1,8 @@
 
-FastKEngine is a knowledge engine.
+FastKEngine is a knowledge base engine.
 
 ```
-knowledge format:
+knowledge base format:
 
 [question]
   question1
@@ -15,18 +15,19 @@ knowledge format:
 Note:
   the charset is UTF-8.
 
-  multi questions correspond to one answer, question match success
+  multi questions correspond to one answer, question matchs success
   when all keywords of a question are matched.
 
   keywords with a pipe line (|) for match any one of them,
-  eg. core-dump location | position .
+  eg. core-dump location | position
 
   the English words with a minus sign (-) for a whole,
   eg. core-dump matchs core dump, coredump and core-dump.
 
   You should segment Chinese words manually.
 
-  the conditions like "key1=value1 key2=value2" in the answer is optional.
+  the conditions like "key1=value1 key2=value2" in the answer is optional,
+  eg. [answer] for no additional condition.
 
 for example:
 
@@ -83,5 +84,36 @@ for example:
 
 [answer]
   输出的是core dump文件位置
+
+
+[question]
+  时间 倒序|降序|倒排 显示|列举|ls 文件|目录
+
+[answer]
+ ls 带上参数-t即可，例如：
+ @cmd@ ls -lt $filename
+
+
+[question]
+  时间 升序|顺序 显示|列举|ls 文件|目录
+
+[answer]
+ ls 带上参数-rt即可，例如：
+ @cmd@ ls -lrt $filename
+
+[question]
+  文件 大小 倒序|降序|倒排 显示|列举|ls 文件|目录
+
+[answer]
+ ls 带上参数-S即可，例如：
+ @cmd@ ls -lS $filename
+
+
+[question]
+  文件 大小 升序|顺序 显示|列举|ls 文件|目录
+
+[answer]
+ ls 带上参数-rS即可，例如：
+ @cmd@ ls -lrS $filename
 
 ```
