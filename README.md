@@ -13,13 +13,26 @@ knowledge format:
     the answer can be multi-lines
 
 Note:
-  condition in the answer is optional.
+  the charset is UTF-8.
+
+  multi questions correspond to one answer, question match success
+  when all keywords of a question are matched.
+
+  keywords with a pipe line (|) for match any one of them,
+  eg. core-dump location | position .
+
+  the English words with a minus sign (-) for a whole,
+  eg. core-dump matchs core dump, coredump and core-dump.
+
+  You should segment Chinese words manually.
+
+  the conditions like "key1=value1 key2=value2" in the answer is optional.
 
 for example:
 
 [question]
-  如何|设置 生成 core-dump
-  core-dump 设置 方法
+  如何 生成 core-dump
+  core-dump 设置
 
 [answer]
  1. ulimit -c 查看内核core dump文件的大小限制，输出为0表示不能生成core dump文件，此时需要进行如下设置：
