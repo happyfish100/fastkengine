@@ -1,9 +1,9 @@
 
 FastKEngine is a knowledge base engine.
 
-```
-knowledge base format:
+* Format
 
+```
 [[question]]
   question1
   question2
@@ -12,7 +12,11 @@ knowledge base format:
 [[answer key1=value1 ...]]
     the answer can be multi-lines
 
-Note:
+```
+
+* Notice
+
+```
   the charset is UTF-8.
 
   multi questions correspond to one answer, question matchs success
@@ -33,9 +37,11 @@ Note:
 
     * the English words with a minus sign (-) for a whole,
       eg. "core-dump" matchs "core dump", "coredump" and "core-dump", but NOT match "dump core".
+```
 
-for example:
+* Example
 
+```
 [[question]]
   如何 生成 core-dump
   core-dump 设置
@@ -107,7 +113,7 @@ for example:
  @cmd@ ls -lrt $filename
 
 [[question]]
-  文件 大小 降序 [显示]
+  文件 大小 降序 [显示|列举]
 
 [[answer]]
  ls 带上参数-S即可，例如：
@@ -115,7 +121,7 @@ for example:
 
 
 [[question]]
-  文件 大小 升序 [显示]
+  文件 大小 升序 [显示|列举]
 
 [[answer]]
  ls 带上参数-rS即可，例如：
@@ -129,7 +135,8 @@ for example:
 文件 文档 file
 目录 directory dir
 时间 日期 time date datetime
-显示 展示 列举 列出 排列 list ls
+显示 展示 show
+列举 列出 排列 list ls
 降序 倒序 倒排 descending descend desc
 升序 正序 顺序 ascending ascend asc
 如何 怎样 how how-to
@@ -140,7 +147,8 @@ for example:
 
 ```
 
+* 重要提示
+
 ```
-重要提示：
   question中的关键字如果存在多个近义词，使用近义词列表的第一列（第一个词）。
 ```
