@@ -4,7 +4,7 @@ FastKEngine is a knowledge base engine.
 * Format
 
 ```
-[[question]]
+[[question id=###]]
   question1
   question2
   ...
@@ -30,7 +30,7 @@ FastKEngine is a knowledge base engine.
   the answer is composite when [[answer ...]] occurs many times after one [[question]].
 
   question keywords:
-    * with a pipe line (|) for match any one of them, eg.
+    * with a pipe line (|) for match any one of the keywords, eg.
       core-dump location | position
 
     * keywords quoted within  [ and ] are optional keywords, [...] must be
@@ -44,7 +44,7 @@ FastKEngine is a knowledge base engine.
 * Example
 
 ```
-[[question]]
+[[question id=123]]
   如何 生成 core-dump
   core-dump 设置
 
@@ -87,7 +87,7 @@ FastKEngine is a knowledge base engine.
  [[/cmd]]
 
 
-[[question]]
+[[question id=124]]
   core-dump 位置
 
 [[answer]]
@@ -103,7 +103,7 @@ FastKEngine is a knowledge base engine.
   输出的是core dump文件位置
 
 
-[[question]]
+[[question id=125]]
   时间 降序 文件|目录|显示|列举|ls
 
 [[answer]]
@@ -111,14 +111,14 @@ FastKEngine is a knowledge base engine.
  [[cmd/]] ls -lt [filename]
 
 
-[[question]]
+[[question id=126]]
   时间 升序 文件|目录|显示|列举|ls
 
 [[answer]]
  ls 带上参数-rt即可，例如：
  [[cmd/]] ls -lrt [filename]
 
-[[question]]
+[[question id=127]]
   文件|目录|ls 大小 降序 [显示|列举]
 
 [[answer]]
@@ -126,12 +126,57 @@ FastKEngine is a knowledge base engine.
  [[cmd/]] ls -lS [filename]
 
 
-[[question]]
+[[question id=128]]
   文件|目录|ls 大小 升序 [显示|列举]
 
 [[answer]]
  ls 带上参数-rS即可，例如：
  [[cmd/]] ls -lrS [filename]
+
+
+[[question id=129]]
+  显示|列举 文件|目录
+  ls
+
+[[answer]]
+ ls用于列举文件和目录，常用命令:
+ 显示详细文件列表：
+ [[cmd/]] ls -l [filename]
+
+ 人性化地显示详细文件列表（文件大小显示非常直观）：
+ [[cmd/]] ls -lh [filename]
+
+ 每行只列出一个文件/目录名（shell脚本中常用做法）：
+ [[cmd/]] ls -1 [filename]
+
+ [[answer uname=Linux]]
+ ll 命令等价于 ls -l
+
+
+[[question id=130]]
+  删除 文件|目录
+  rm
+
+[[answer]]
+ rm用于删除文件和目录，rm带上-r参数可以删除目录。常用命令:
+ 不询问删除文件：
+ [[cmd/]] rm -f <filename>
+
+ 删除目录和子目录以及目录下的所有文件：
+ [[cmd/]] rm -r <filepath>
+
+ 注意：文件和目录删除后不可恢复，请谨慎使用以上命令，尤其是rm -rf
+       rm -rf 后面的filepath最好明确指定路径名称，尽量不要使用 *
+       切勿尝试执行：rm -rf /
+
+
+[[question id=131]]
+  删除 空 目录
+  rmdir
+
+[[answer]]
+ rmdir用于删除空目录，命令示例：
+ [[cmd/]] rmdir <filepath>
 
 ```
 
@@ -150,7 +195,7 @@ FastKEngine is a knowledge base engine.
 大小 尺寸 size
 位置 地方 哪儿 哪里 那儿 那里 position  location place
 设置 设定 配置 set setting config configure configuration
-
+删除 移除 delete remove
 ```
 
 * 重要提示
