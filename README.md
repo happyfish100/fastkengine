@@ -22,10 +22,12 @@ FastKEngine is a knowledge base engine.
   multi questions correspond to one answer, question matchs success
   when all requred keywords of a question are matched.
 
-  You should segment Chinese words manually.
+  you should segment Chinese words manually.
 
   the conditions like "key1=value1 key2=value2" in the answer is optional,
   eg. [[answer]] for no additional condition.
+
+  the answer is composite when [[answer ...]] occurs many times after one [[question]].
 
   question keywords:
     * with a pipe line (|) for match any one of them, eg.
@@ -60,11 +62,13 @@ FastKEngine is a knowledge base engine.
  fs.suid_dumpable：设置为1或2
 
  检查命令：
- @cmd@ sysctl kernel.core_pattern fs.suid_dumpable
+ [[cmd/]] sysctl kernel.core_pattern fs.suid_dumpable
 
  设置命令：
- @cmd@ sudo sysctl -w kernel.core_pattern=/tmp/core.%p
- @cmd@ sudo sysctl -w fs.suid_dumpable=1
+ [[cmd]]
+ sudo sysctl -w kernel.core_pattern=/tmp/core.%p
+ sudo sysctl -w fs.suid_dumpable=1
+ [[/cmd]]
 
  [[answer uname=Darwin]]
  2. 通过sysctl检查和设置内核参数：
@@ -73,12 +77,14 @@ FastKEngine is a knowledge base engine.
  kern.sugid_coredump：设置为1
 
  检查命令：
- @cmd@ sysctl kern.corefile kern.coredump kern.sugid_coredump
+ [[cmd/]] sysctl kern.corefile kern.coredump kern.sugid_coredump
 
  设置命令：
- @cmd@ sudo sysctl -w kern.corefile=/cores/core.%P
- @cmd@ sudo sysctl -w kern.coredump=1
- @cmd@ sudo sysctl -w kern.sugid_coredump=1
+ [[cmd]]
+ sudo sysctl -w kern.corefile=/cores/core.%P
+ sudo sysctl -w kern.coredump=1
+ sudo sysctl -w kern.sugid_coredump=1
+ [[/cmd]]
 
 
 [[question]]
@@ -88,44 +94,44 @@ FastKEngine is a knowledge base engine.
  执行命令：
 
  [[answer uname=Linux]]
- @cmd@ sysctl kernel.core_pattern
+ [[cmd/]] sysctl kernel.core_pattern
 
  [[answer uname=Darwin]]
- @cmd@ sysctl kern.corefile
+ [[cmd/]] sysctl kern.corefile
 
 [[answer]]
   输出的是core dump文件位置
 
 
 [[question]]
-  时间 降序 文件|目录|显示
+  时间 降序 文件|目录|显示|列举|ls
 
 [[answer]]
  ls 带上参数-t即可，例如：
- @cmd@ ls -lt $filename
+ [[cmd/]] ls -lt [filename]
 
 
 [[question]]
-  时间 升序 文件|目录|显示
+  时间 升序 文件|目录|显示|列举|ls
 
 [[answer]]
  ls 带上参数-rt即可，例如：
- @cmd@ ls -lrt $filename
+ [[cmd/]] ls -lrt [filename]
 
 [[question]]
-  文件 大小 降序 [显示|列举]
+  文件|目录|ls 大小 降序 [显示|列举]
 
 [[answer]]
  ls 带上参数-S即可，例如：
- @cmd@ ls -lS $filename
+ [[cmd/]] ls -lS [filename]
 
 
 [[question]]
-  文件 大小 升序 [显示|列举]
+  文件|目录|ls 大小 升序 [显示|列举]
 
 [[answer]]
  ls 带上参数-rS即可，例如：
- @cmd@ ls -lrS $filename
+ [[cmd/]] ls -lrS [filename]
 
 ```
 
@@ -136,7 +142,7 @@ FastKEngine is a knowledge base engine.
 目录 directory dir
 时间 日期 time date datetime
 显示 展示 show
-列举 列出 排列 list ls
+列举 列出 排列 list
 降序 倒序 倒排 descending descend desc
 升序 正序 顺序 ascending ascend asc
 如何 怎样 how how-to
