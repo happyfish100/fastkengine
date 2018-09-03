@@ -62,10 +62,10 @@ FastKEngine is a knowledge base engine.
  fs.suid_dumpable：设置为1或2
 
  检查命令：
- [[cmd/]] sysctl kernel.core_pattern fs.suid_dumpable
+ [[cmd required/]] sysctl kernel.core_pattern fs.suid_dumpable
 
  设置命令：
- [[cmd]]
+ [[cmd required]]
  sudo sysctl -w kernel.core_pattern=/tmp/core.%p
  sudo sysctl -w fs.suid_dumpable=1
  [[/cmd]]
@@ -77,10 +77,10 @@ FastKEngine is a knowledge base engine.
  kern.sugid_coredump：设置为1
 
  检查命令：
- [[cmd/]] sysctl kern.corefile kern.coredump kern.sugid_coredump
+ [[cmd required/]] sysctl kern.corefile kern.coredump kern.sugid_coredump
 
  设置命令：
- [[cmd]]
+ [[cmd required]]
  sudo sysctl -w kern.corefile=/cores/core.%P
  sudo sysctl -w kern.coredump=1
  sudo sysctl -w kern.sugid_coredump=1
@@ -94,10 +94,10 @@ FastKEngine is a knowledge base engine.
  执行命令：
 
  [[answer uname=Linux]]
- [[cmd/]] sysctl kernel.core_pattern
+ [[cmd required/]] sysctl kernel.core_pattern
 
  [[answer uname=Darwin]]
- [[cmd/]] sysctl kern.corefile
+ [[cmd required/]] sysctl kern.corefile
 
 [[answer]]
   输出的是core dump文件位置
@@ -108,7 +108,7 @@ FastKEngine is a knowledge base engine.
 
 [[answer]]
  ls 带上参数-t即可，例如：
- [[cmd/]] ls -lt [filename]
+ [[cmd required/]] ls -lt [filename]
 
 
 [[question id=126]]
@@ -116,14 +116,14 @@ FastKEngine is a knowledge base engine.
 
 [[answer]]
  ls 带上参数-rt即可，例如：
- [[cmd/]] ls -lrt [filename]
+ [[cmd required/]] ls -lrt [filename]
 
 [[question id=127]]
   文件|目录|ls 大小 降序 [显示|列举]
 
 [[answer]]
  ls 带上参数-S即可，例如：
- [[cmd/]] ls -lS [filename]
+ [[cmd required/]] ls -lS [filename]
 
 
 [[question id=128]]
@@ -131,7 +131,7 @@ FastKEngine is a knowledge base engine.
 
 [[answer]]
  ls 带上参数-rS即可，例如：
- [[cmd/]] ls -lrS [filename]
+ [[cmd required/]] ls -lrS [filename]
 
 
 [[question id=129]]
@@ -176,7 +176,7 @@ FastKEngine is a knowledge base engine.
 
 [[answer]]
  rmdir用于删除空目录，命令示例：
- [[cmd/]] rmdir <filepath>
+ [[cmd required/]] rmdir <filepath>
 
 ```
 
