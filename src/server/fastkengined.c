@@ -29,6 +29,7 @@
 static bool daemon_mode = true;
 static int setup_server_env(const char *config_filename);
 
+static int test_segment();
 int main(int argc, char *argv[])
 {
     char *config_filename;
@@ -68,6 +69,10 @@ int main(int argc, char *argv[])
         log_destroy();
         return 0;
     }
+
+    r = test_segment();
+    sleep(60);
+    return r;
 
     sched_set_delay_params(300, 1024);
     r = setup_server_env(config_filename);
@@ -147,5 +152,35 @@ static int setup_server_env(const char *config_filename)
     result = sf_setup_signal_handler();
 
     log_set_cache(true);
+    return result;
+}
+
+static int test_segment()
+{
+    char *buff;
+    int64_t file_size;
+    int result;
+    int row_count;
+    int i;
+    char **rows;
+    string_t *keywords;
+    WordSegmentContext context;
+    const char *filename = "/Users/yuqing/Devel/fastkengine/conf/keywords.txt";
+
+    if ((result=getFileContent(filename, &buff, &file_size)) != 0) {
+        return result;
+    }
+
+    rows = split(buff, '\n', 0, &row_count);
+    keywords = (string_t *)malloc(sizeof(string_t) * row_count);
+    for (i=0; i<row_count; i++) {
+        keywords[i].str = rows[i];
+        keywords[i].len = strlen(rows[i]);
+    }
+
+    result = word_segment_init(&context, 1024,
+            keywords, row_count);
+
+    freeSplit(rows);
     return result;
 }
