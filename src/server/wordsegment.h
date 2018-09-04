@@ -41,6 +41,9 @@ typedef struct word_segment_result {
 typedef struct word_segment_array {
     WordSegmentResult *rows;
     int count;
+
+    char buff[256];   //for internal use
+    string_t holder;  //for internal use
 } WordSegmentArray;
 
 #ifdef __cplusplus

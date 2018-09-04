@@ -130,34 +130,79 @@ static inline bool is_chinese_char(const string_t *keyword)
         ((((unsigned char)keyword->str[2]) & 0xC0) == 0x80);
 }
 
+static int next_word(const char **pp, const char *end, string_t *ch)
+{
+    if (*pp >= end) {
+        return ENOENT;
+    }
+
+    ch->str = (char *)*pp;
+    while (*pp < end &&  ((**pp >= 'a' && **pp <= 'z') ||
+                (**pp >= '0' && **pp <= '9')))
+    {
+        (*pp)++;
+    }
+    ch->len = (char *)*pp - ch->str;
+    if (ch->len > 0) {
+        return 0;
+    }
+
+    if ((((unsigned char)**pp) & 0xF0) == 0xE0) {  //Chinese character
+        ch->len = end - *pp;
+        if (ch->len < 3) {
+            logError("file: "__FILE__", line: %d, "
+                    "invalid Chinese characters length: %d",
+                    __LINE__, ch->len);
+            *pp += 1;
+            return EINVAL;
+        }
+
+        if (!(((((unsigned char)ch->str[1]) & 0xC0) == 0x80) &&
+                ((((unsigned char)ch->str[2]) & 0xC0) == 0x80)))
+        {
+            logError("file: "__FILE__", line: %d, "
+                    "invalid Chinese characters: %.*s",
+                    __LINE__, ch->len, ch->str);
+            *pp += 1;
+            return EINVAL;
+        }
+
+        ch->len = 3;
+        *pp += 3;
+        return 0;
+    } else {
+        logWarning("file: "__FILE__", line: %d, "
+                "invalid character: %c(0x%02x)",
+                __LINE__, **pp, ((unsigned char)**pp) & 0xFF);
+        *pp += 1;  //skip unknown char
+        return EINVAL;
+    }
+}
+
 static int insert_keyword(WordSegmentContext *context,
         const string_t *keyword)
 {
     string_t ch;
+    const char *p;
+    const char *end;
     int i;
     WordSegmentHashTable **htable;
     WordSegmentHashEntry *hentry;
 
-    if (keyword->len % 3 != 0) {
-        logError("file: "__FILE__", line: %d, "
-                "invalid Chinese characters length: %d, keyword: %.*s",
-                __LINE__, keyword->len, keyword->len, keyword->str);
-        return EINVAL;
-    }
-
     htable = &context->top;
-    for (i = 0; i < keyword->len; i += 3) {
-        ch.str = keyword->str + i;
-        ch.len = 3;
-        if (!is_chinese_char(&ch)) {
-            logError("file: "__FILE__", line: %d, "
-                    "offset: %d, invalid Chinese characters, keyword: %.*s",
-                    __LINE__, i, keyword->len, keyword->str);
-            return EINVAL;
+    p = keyword->str;
+    end = keyword->str + keyword->len;
+
+    i = 0;
+    while (p < end) {
+        if (next_word(&p, end, &ch) != 0) {
+            continue;
         }
 
-        if ((hentry=insert_char(context, htable, i + 1,
-                        &ch, i + 3 == keyword->len)) == 0)
+        logInfo("word[%d]: %.*s, last: %d", i, ch.len, ch.str, p == end);
+
+        if ((hentry=insert_char(context, htable, ++i,
+                        &ch, p == end)) == 0)
         {
             return ENOMEM;
         }
@@ -166,6 +211,39 @@ static int insert_keyword(WordSegmentContext *context,
     }
 
     return 0;
+}
+
+static WordSegmentHashEntry *find_keyword(WordSegmentContext *context,
+        const string_t *keyword)
+{
+    string_t ch;
+    const char *p;
+    const char *end;
+    WordSegmentHashTable **htable;
+    WordSegmentHashEntry *hentry;
+
+    hentry = NULL;
+    htable = &context->top;
+    p = keyword->str;
+    end = keyword->str + keyword->len;
+
+    int i = 0;
+    while (p < end) {
+        if (next_word(&p, end, &ch) != 0) {
+            continue;
+        }
+
+        logInfo("word[%d]: %.*s, last: %d", i++, ch.len, ch.str, p == end);
+
+        hentry = hashtable_find(*htable, &ch);
+        if (hentry == NULL) {
+            return NULL;
+        }
+
+        htable = &hentry->children;
+    }
+
+    return (hentry != NULL && hentry->is_keyword) ? hentry : NULL;
 }
 
 int word_segment_init(WordSegmentContext *context, const int top_capacity,
@@ -207,12 +285,89 @@ int word_segment_init(WordSegmentContext *context, const int top_capacity,
     return result;
 }
 
+static void word_segment_normalize(const string_t *input, string_t *output)
+{
+    unsigned char *p;
+    unsigned char *end;
+    unsigned char *dest;
+
+    dest = (unsigned char *)output->str;
+    p = (unsigned char *)input->str;
+    end = (unsigned char *)input->str + input->len;
+    while (p < end) {
+        if (FC_IS_UPPER_LETTER(*p)) {  //uppercase letter
+            *dest++ = *p++ + 32;  //to lowercase
+        } else if (*p == '\t' || *p == '\r' || *p == '\n' ||
+                *p == '\f' || *p == '\a' || *p == '\b' || *p == '\v')
+        {  //space chars
+            *dest++ = ' ';
+            p++;
+        } else if (*p == '-') {
+            *dest++ = *p++;
+            if (p > (unsigned char *)input->str && p + 1 < end) {
+                if (FC_IS_LETTER(*(p-1)) && FC_IS_LETTER(*(p+1))) {
+                    dest--;  //ignore -
+                }
+            }
+        } else if ((p + 2 < end) &&
+                ((((unsigned char)*p) & 0xF0) == 0xE0) &&
+                ((((unsigned char)*(p + 1)) & 0xC0) == 0x80) &&
+                ((((unsigned char)*(p + 2)) & 0xC0) == 0x80))
+        {
+            int old_char;
+            old_char = ((*p & 0x1F) << 12) | ((*(p + 1) & 0x3F) << 6) | (*(p + 2) & 0x3F);
+            if (old_char == 0x3000) { //blank char
+                *dest++ = ' ';
+            } else if (old_char >= 0xFF01 && old_char <= 0xFF5E) { //full char
+                *dest = old_char - 0xFEE0;
+                if (FC_IS_UPPER_LETTER(*dest)) {
+                    *dest += 32;
+                }
+                dest++;
+            } else {
+                *dest++ = *p;
+                *dest++ = *(p + 1);
+                *dest++ = *(p + 2);
+            }
+            p += 3;
+        } else {
+            *dest++ = *p++;
+        }
+    }
+
+    output->len = dest - (unsigned char *)output->str;
+}
+
 void word_segment_destroy(WordSegmentContext *context)
 {
+    fast_mblock_destroy(&context->hentry_allocator);
+    fast_mblock_destroy(&context->htable_allocator);
+    fast_mpool_destroy(&context->string_allocator);
 }
 
 int word_segment_split(WordSegmentContext *context, const string_t *input,
         WordSegmentArray *output)
 {
+    WordSegmentHashEntry *hentry;
+
+    if (input->len <= sizeof(output->buff)) {
+        output->holder.str = output->buff;
+    } else {
+        output->holder.str = (char *)malloc(input->len);
+        if (output->holder.str == NULL) {
+            logError("file: "__FILE__", line: %d, "
+                    "malloc %d bytes fail", __LINE__, input->len);
+            return ENOMEM;
+        }
+    }
+
+    word_segment_normalize(input, &output->holder);
+    hentry = find_keyword(context, &output->holder);
+    if (hentry != NULL) {
+        printf("found %.*s\n", output->holder.len, output->holder.str);
+    } else {
+        printf("NOT found %.*s\n", output->holder.len, output->holder.str);
+    }
+
     return 0;
 }

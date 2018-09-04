@@ -165,6 +165,9 @@ static int test_segment()
     char **rows;
     string_t *keywords;
     WordSegmentContext context;
+    string_t input;
+    WordSegmentArray output;
+    int index;
     const char *filename = "/Users/yuqing/Devel/fastkengine/conf/keywords.txt";
 
     if ((result=getFileContent(filename, &buff, &file_size)) != 0) {
@@ -181,6 +184,19 @@ static int test_segment()
     result = word_segment_init(&context, 1024,
             keywords, row_count);
 
+    srand(time(NULL));
+    rand();
+    index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
+    input = keywords[index];
+
+    input.str = "Ａ　Ｂ　　Ｃ　Ｄ　Ｅ　ＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙ　ｚ";
+    input.len = strlen(input.str);
+
+    logInfo("row_count: %d, index: %d, %.*s", row_count, index, input.len, input.str);
+    word_segment_split(&context, &input, &output);
+
     freeSplit(rows);
+
+
     return result;
 }
