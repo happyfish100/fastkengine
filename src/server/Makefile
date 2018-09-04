@@ -6,7 +6,7 @@ LIB_PATH =  -lfastcommon -lserverframe
 TARGET_PATH = /usr/bin
 CONFIG_PATH = $(TARGET_CONF_PATH)
 
-ALL_OBJS = wordsegment.o
+ALL_OBJS = wordsegment.o similar_words.o
 
 ALL_PRGS = fastkengined
 

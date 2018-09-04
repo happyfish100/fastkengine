@@ -59,6 +59,8 @@ extern "C" {
     int word_segment_split(WordSegmentContext *context, const string_t *input,
             WordSegmentArray *output);
 
+    void word_segment_free_result(WordSegmentArray *array);
+
 #ifdef __cplusplus
 }
 #endif

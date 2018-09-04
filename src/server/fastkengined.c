@@ -23,6 +23,7 @@
 #include "sf/sf_service.h"
 #include "sf/sf_util.h"
 #include "wordsegment.h"
+#include "similar_words.h"
 //#include "common/fcfg_proto.h"
 //#include "common/fcfg_types.h"
 
@@ -30,6 +31,8 @@ static bool daemon_mode = true;
 static int setup_server_env(const char *config_filename);
 
 static int test_segment();
+static int test_similar_words();
+
 int main(int argc, char *argv[])
 {
     char *config_filename;
@@ -70,8 +73,13 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    r = test_segment();
+    srand(time(NULL));
+    rand();
+
+    r = test_similar_words();
+    return r;
     sleep(60);
+    r = test_segment();
     return r;
 
     sched_set_delay_params(300, 1024);
@@ -184,8 +192,6 @@ static int test_segment()
     result = word_segment_init(&context, 1024,
             keywords, row_count);
 
-    srand(time(NULL));
-    rand();
     index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
     input = keywords[index];
 
@@ -196,7 +202,54 @@ static int test_segment()
     word_segment_split(&context, &input, &output);
 
     freeSplit(rows);
-
+    word_segment_free_result(&output);
 
     return result;
+}
+
+static int test_similar_words()
+{
+    char *buff;
+    int64_t file_size;
+    int result;
+    int row_count;
+    int col_count;
+    int row_index;
+    int col_index;
+    char **lines;
+    char **cols;
+    char *line;
+    string_t keyword;
+    const string_t *similar;
+    SimilarWordsContext context;
+    const char *filename = "/Users/yuqing/Devel/fastkengine/conf/similars.txt";
+
+    if ((result=getFileContent(filename, &buff, &file_size)) != 0) {
+        return result;
+    }
+
+    lines = split(buff, '\n', 0, &row_count);
+
+    row_index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
+    line = strdup(lines[row_index]);
+
+    cols = split(line, ' ', 0,  &col_count); 
+    col_index = (int)((int64_t)rand() * col_count / (int64_t)RAND_MAX);
+    FC_SET_STRING(keyword, cols[col_index]);
+
+    if ((result=similar_words_init(&context, 10240, lines, row_count - 1, ' ')) != 0) {
+        return result;
+    }
+
+    similar = similar_words_find(&context, &keyword);
+    logInfo("row_count: %d, row_index: %d, col_index: %d, "
+            "keyword: %.*s", row_count, row_index, col_index,
+            keyword.len, keyword.str);
+
+    if (similar != NULL) {
+        logInfo("similar: %.*s", similar->len, similar->str);
+    }
+
+    similar_words_destroy(&context);
+    return 0;
 }

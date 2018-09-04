@@ -45,7 +45,7 @@ static WordSegmentHashEntry *hashtable_find(WordSegmentHashTable *htable,
 {
     WordSegmentHashEntry *current;
     unsigned int hash_code;
-    int index;
+    unsigned int index;
 
     hash_code = simple_hash(ch->str, ch->len);
     index = hash_code % htable->capacity;
@@ -65,7 +65,7 @@ static WordSegmentHashEntry *hashtable_insert(WordSegmentContext *context,
 {
     WordSegmentHashEntry *hentry;
     unsigned int hash_code;
-    int index;
+    unsigned int index;
 
     hentry = (WordSegmentHashEntry *)fast_mblock_alloc_object(
             &context->hentry_allocator);
@@ -276,6 +276,7 @@ int word_segment_init(WordSegmentContext *context, const int top_capacity,
     for (key=keywords; key<end; key++) {
         if ((result=insert_keyword(context, key)) != 0) {
             if (result == EINVAL) {
+                result = 0;
                 continue;
             }
             break;
@@ -370,4 +371,12 @@ int word_segment_split(WordSegmentContext *context, const string_t *input,
     }
 
     return 0;
+}
+
+void word_segment_free_result(WordSegmentArray *array)
+{
+    if (array->holder.str != NULL && array->holder.str != array->buff) {
+        free(array->holder.str);
+        array->holder.str = NULL;
+    }
 }
