@@ -10,6 +10,7 @@
 #include "fastcommon/common_define.h"
 #include "fastcommon/fast_mblock.h"
 #include "fastcommon/fast_mpool.h"
+#include "keyword_iterator.h"
 
 struct word_segment_hash_table;
 
@@ -34,13 +35,10 @@ typedef struct word_segment_context {
     struct fast_mpool_man  string_allocator;
 } WordSegmentContext;
 
-typedef struct word_segment_result {
-    string_t words;
-    int count;
-} WordSegmentResult;
+#define MAX_KEYWORDS_ROWS  (MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
 
 typedef struct word_segment_array {
-    WordSegmentResult *rows;
+    KeywordArray rows[MAX_KEYWORDS_ROWS];
     int count;
 
     char buff[256];   //for internal use

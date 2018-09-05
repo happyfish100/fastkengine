@@ -306,22 +306,54 @@ int word_segment_init(WordSegmentContext *context, const int top_capacity,
     return result;
 }
 
-void word_segment_normalize(const string_t *input, string_t *output)
+static void remove_spaces_after_chinese(string_t *input)
 {
     unsigned char *p;
     unsigned char *end;
     unsigned char *dest;
 
+    dest = (unsigned char *)input->str;
+    p = (unsigned char *)input->str;
+    end = (unsigned char *)input->str + input->len;
+    while (p < end) {
+        if ((p + 2 < end) &&
+                ((((unsigned char)*p) & 0xF0) == 0xE0) &&
+                ((((unsigned char)*(p + 1)) & 0xC0) == 0x80) &&
+                ((((unsigned char)*(p + 2)) & 0xC0) == 0x80))
+        {
+            *dest++ = *p++;
+            *dest++ = *p++;
+            *dest++ = *p++;
+            while (p < end && *p == ' ') {
+                p++;
+            }
+        } else {
+            *dest++ = *p++;
+        }
+    }
+    input->len = dest - (unsigned char *)input->str;
+}
+
+void word_segment_normalize(const string_t *input, string_t *output)
+{
+    unsigned char *p;
+    unsigned char *end;
+    unsigned char *dest;
+    int space_count;
+    int chinses_count;
+
+    space_count = chinses_count = 0;
     dest = (unsigned char *)output->str;
     p = (unsigned char *)input->str;
     end = (unsigned char *)input->str + input->len;
     while (p < end) {
         if (FC_IS_UPPER_LETTER(*p)) {  //uppercase letter
             *dest++ = *p++ + 32;  //to lowercase
-        } else if (*p == '\t' || *p == '\r' || *p == '\n' ||
+        } else if (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n' ||
                 *p == '\f' || *p == '\a' || *p == '\b' || *p == '\v')
         {  //space chars
             *dest++ = ' ';
+            space_count++;
             p++;
         } else if (*p == '-') {
             *dest++ = *p++;
@@ -339,6 +371,7 @@ void word_segment_normalize(const string_t *input, string_t *output)
             old_char = ((*p & 0x1F) << 12) | ((*(p + 1) & 0x3F) << 6) | (*(p + 2) & 0x3F);
             if (old_char == 0x3000) { //blank char
                 *dest++ = ' ';
+                space_count++;
             } else if (old_char >= 0xFF01 && old_char <= 0xFF5E) { //full char
                 *dest = old_char - 0xFEE0;
                 if (FC_IS_UPPER_LETTER(*dest)) {
@@ -349,6 +382,7 @@ void word_segment_normalize(const string_t *input, string_t *output)
                 *dest++ = *p;
                 *dest++ = *(p + 1);
                 *dest++ = *(p + 2);
+                chinses_count++;
             }
             p += 3;
         } else {
@@ -357,6 +391,9 @@ void word_segment_normalize(const string_t *input, string_t *output)
     }
 
     output->len = dest - (unsigned char *)output->str;
+    if (space_count > 0 && chinses_count > 0) {
+        remove_spaces_after_chinese(output);
+    }
 }
 
 void word_segment_destroy(WordSegmentContext *context)
@@ -364,6 +401,84 @@ void word_segment_destroy(WordSegmentContext *context)
     fast_mblock_destroy(&context->hentry_allocator);
     fast_mblock_destroy(&context->htable_allocator);
     fast_mpool_destroy(&context->string_allocator);
+}
+
+static int compare_offset(const void *p1, const void *p2)
+{
+    int sub;
+    sub = ((KeywordInfo *)p1)->offset - ((KeywordInfo *)p2)->offset;
+    if (sub == 0) {
+        return ((KeywordInfo *)p1)->keyword.len - ((KeywordInfo *)p2)->keyword.len;
+    } else {
+        return sub;
+    }
+}
+
+static int word_segment_output(WordSegmentContext *context,
+        KeywordInfo *keywords, const int count,
+        WordSegmentArray *output)
+{
+    KeywordInfo *p;
+    KeywordInfo *end;
+    KeywordIteratorContext iterator;
+    KeywordIteratorGroup *group;
+    int i;
+
+    if (count == 0) {
+        output->count = 0;
+        return ENOENT;
+    } else if (count == 1) {
+        output->count = 1;
+        output->rows[0].count = 1;
+        output->rows[0].keywords[0] = keywords[0].keyword;
+        return 0;
+    }
+
+    qsort(keywords, count, sizeof(KeywordInfo), compare_offset);
+
+    logInfo("keyword count: %d", count);
+    for (i=0; i<count; i++) {
+        logInfo("offset: %d, %.*s(%d)", keywords[i].offset,
+                keywords[i].keyword.len, keywords[i].keyword.str,
+                keywords[i].keyword.len);
+    }
+
+    p = keywords;
+    end = keywords + count;
+
+    memset(&iterator, 0, sizeof(iterator));
+    group = iterator.groups;
+    group->keywords[group->count++] = p->keyword;
+    p++;
+
+    while (p < end) {
+        if (p->offset >= (p-1)->offset + (p-1)->keyword.len) {  //next group
+            group++;
+            if (group - iterator.groups >= MAX_KEYWORDS_COUNT) {
+                logWarning("file: "__FILE__", line: %d, "
+                        "keywords group exceeds %d",
+                        __LINE__, MAX_KEYWORDS_COUNT);
+                break;
+            }
+        }
+
+        if (group->count < MAX_KEYWORDS_COUNT) {
+            group->keywords[group->count++] = p->keyword;
+        } else {
+            logWarning("file: "__FILE__", line: %d, "
+                    "keywords exceeds %d",
+                    __LINE__, MAX_KEYWORDS_COUNT);
+        }
+
+        p++;
+    }
+
+    iterator.count = (group - iterator.groups) + 1;
+    logInfo("iterator.count: %d", iterator.count);
+
+    //TODO DO iterator!!!
+
+    return 0;
 }
 
 #define SET_KEYWORD_INFO(kinfo) \
@@ -384,13 +499,12 @@ void word_segment_destroy(WordSegmentContext *context)
 static int word_segment_do_split(WordSegmentContext *context,
         WordSegmentArray *output)
 {
-#define MAX_KEYWORDS  32
+#define MAX_KEYWORDS  (MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
     string_t word;
     string_t keyword;
     KeywordInfo keywords[MAX_KEYWORDS];
     KeywordInfo *kinfo;
     int count;
-    char buff[128];
     const char *p;
     const char *end;
     const char *start;
@@ -400,7 +514,6 @@ static int word_segment_do_split(WordSegmentContext *context,
     bool is_chinese;
 
     kinfo = keywords;
-    keyword.str = buff;
     p = output->holder.str;
     end = output->holder.str + output->holder.len;
     i = 0;
@@ -416,13 +529,12 @@ static int word_segment_do_split(WordSegmentContext *context,
             continue;
         }
 
+        keyword.str = (char *)(p - word.len);
         keyword.len = 0;
         chinese_chars = 1;
         save_point = p;
         while (true) {
-            memcpy(keyword.str + keyword.len, word.str, word.len);
             keyword.len += word.len;
-
             logInfo("find: %.*s", keyword.len, keyword.str);
             if (find_keyword(context, &keyword) != NULL) {
                 SET_KEYWORD_INFO(kinfo);
@@ -447,14 +559,7 @@ static int word_segment_do_split(WordSegmentContext *context,
     }
 
     count = kinfo - keywords;
-    logInfo("keyword count: %d", count);
-    for (i=0; i<count; i++) {
-        logInfo("offset: %d, %.*s(%d)", keywords[i].offset,
-                keywords[i].keyword.len, keywords[i].keyword.str,
-                keywords[i].keyword.len);
-    }
-
-    return 0;
+    return word_segment_output(context, keywords, count, output);
 }
 
 int word_segment_split(WordSegmentContext *context, const string_t *input,
