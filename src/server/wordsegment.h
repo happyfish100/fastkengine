@@ -28,6 +28,7 @@ typedef struct word_segment_hash_table {
 typedef struct word_segment_context {
     WordSegmentHashTable *top;
     int top_capacity;
+    int max_chinese_chars;
     struct fast_mblock_man hentry_allocator;
     struct fast_mblock_man htable_allocator;
     struct fast_mpool_man  string_allocator;
@@ -55,6 +56,8 @@ extern "C" {
             const string_t *keywords, const int count);
 
     void word_segment_destroy(WordSegmentContext *context);
+
+    void word_segment_normalize(const string_t *input, string_t *output);
 
     int word_segment_split(WordSegmentContext *context, const string_t *input,
             WordSegmentArray *output);

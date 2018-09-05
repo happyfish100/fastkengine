@@ -77,8 +77,6 @@ int main(int argc, char *argv[])
     rand();
 
     r = test_similar_words();
-    return r;
-    sleep(60);
     r = test_segment();
     return r;
 
@@ -195,7 +193,7 @@ static int test_segment()
     index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
     input = keywords[index];
 
-    input.str = "Ａ　Ｂ　　Ｃ　Ｄ　Ｅ　ＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙ　ｚ";
+    input.str = "查 找 文 件 列  表";
     input.len = strlen(input.str);
 
     logInfo("row_count: %d, index: %d, %.*s", row_count, index, input.len, input.str);

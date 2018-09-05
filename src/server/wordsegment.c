@@ -6,6 +6,11 @@
 #include "fastcommon/shared_func.h"
 #include "wordsegment.h"
 
+typedef struct keyword_info {
+    int offset;
+    string_t keyword;
+} KeywordInfo;
+
 static int hashtable_init(WordSegmentContext *context,
         WordSegmentHashTable **htable, const int capacity)
 {
@@ -119,31 +124,22 @@ static WordSegmentHashEntry *insert_char(WordSegmentContext *context,
     return hashtable_insert(context, *htable, ch, is_keyword);
 }
 
-static inline bool is_chinese_char(const string_t *keyword)
+static int next_word(const char **pp, const char *end, string_t *ch,
+        bool *is_chinese)
 {
-    if (keyword->len < 3) {
-        return false;
-    }
-
-    return ((((unsigned char)keyword->str[0]) & 0xF0) == 0xE0) &&
-        ((((unsigned char)keyword->str[1]) & 0xC0) == 0x80) &&
-        ((((unsigned char)keyword->str[2]) & 0xC0) == 0x80);
-}
-
-static int next_word(const char **pp, const char *end, string_t *ch)
-{
+    ch->str = (char *)*pp;
     if (*pp >= end) {
         return ENOENT;
     }
 
-    ch->str = (char *)*pp;
-    while (*pp < end &&  ((**pp >= 'a' && **pp <= 'z') ||
-                (**pp >= '0' && **pp <= '9')))
+    while ((*pp < end) &&  (FC_IS_LOWER_LETTER(**pp) ||
+                FC_IS_DIGITAL(**pp)))
     {
         (*pp)++;
     }
     ch->len = (char *)*pp - ch->str;
     if (ch->len > 0) {
+        *is_chinese = false;
         return 0;
     }
 
@@ -169,6 +165,7 @@ static int next_word(const char **pp, const char *end, string_t *ch)
 
         ch->len = 3;
         *pp += 3;
+        *is_chinese = true;
         return 0;
     } else {
         logWarning("file: "__FILE__", line: %d, "
@@ -180,26 +177,37 @@ static int next_word(const char **pp, const char *end, string_t *ch)
 }
 
 static int insert_keyword(WordSegmentContext *context,
-        const string_t *keyword)
+        const string_t *keyword, bool *pure_chinese, int *char_count)
 {
     string_t ch;
     const char *p;
     const char *end;
     int i;
+    bool is_chinese;
     WordSegmentHashTable **htable;
     WordSegmentHashEntry *hentry;
 
+    *pure_chinese = true;
+    *char_count = 0;
     htable = &context->top;
     p = keyword->str;
     end = keyword->str + keyword->len;
 
     i = 0;
     while (p < end) {
-        if (next_word(&p, end, &ch) != 0) {
+        if (next_word(&p, end, &ch, &is_chinese) != 0) {
             continue;
         }
 
-        logInfo("word[%d]: %.*s, last: %d", i, ch.len, ch.str, p == end);
+        if (is_chinese) {
+            (*char_count)++;
+        } else {
+            *pure_chinese = false;
+            *char_count += ch.len;
+        }
+
+        logInfo("word[%d]: %.*s, last: %d, is_chinese: %d",
+                i, ch.len, ch.str, p == end, is_chinese);
 
         if ((hentry=insert_char(context, htable, ++i,
                         &ch, p == end)) == 0)
@@ -221,6 +229,7 @@ static WordSegmentHashEntry *find_keyword(WordSegmentContext *context,
     const char *end;
     WordSegmentHashTable **htable;
     WordSegmentHashEntry *hentry;
+    bool is_chinese;
 
     hentry = NULL;
     htable = &context->top;
@@ -229,11 +238,12 @@ static WordSegmentHashEntry *find_keyword(WordSegmentContext *context,
 
     int i = 0;
     while (p < end) {
-        if (next_word(&p, end, &ch) != 0) {
+        if (next_word(&p, end, &ch, &is_chinese) != 0) {
             continue;
         }
 
-        logInfo("word[%d]: %.*s, last: %d", i++, ch.len, ch.str, p == end);
+        logInfo("word[%d]: %.*s, last: %d, is_chinese: %d",
+                i++, ch.len, ch.str, p == end, is_chinese);
 
         hentry = hashtable_find(*htable, &ch);
         if (hentry == NULL) {
@@ -252,6 +262,8 @@ int word_segment_init(WordSegmentContext *context, const int top_capacity,
     const string_t *key;
     const string_t *end;
     int result;
+    int char_count;
+    bool pure_chinese;
 
     context->top_capacity = top_capacity;
     context->top = NULL;
@@ -272,9 +284,16 @@ int word_segment_init(WordSegmentContext *context, const int top_capacity,
         return result;
     }
     
+    context->max_chinese_chars = 0;
     end = keywords + count;
     for (key=keywords; key<end; key++) {
-        if ((result=insert_keyword(context, key)) != 0) {
+        if ((result=insert_keyword(context, key, &pure_chinese,
+                        &char_count)) == 0)
+        {
+            if (pure_chinese && char_count > context->max_chinese_chars) {
+                context->max_chinese_chars = char_count;
+            }
+        } else {
             if (result == EINVAL) {
                 result = 0;
                 continue;
@@ -283,10 +302,11 @@ int word_segment_init(WordSegmentContext *context, const int top_capacity,
         }
     }
 
+    logInfo("max_chinese_chars: %d", context->max_chinese_chars);
     return result;
 }
 
-static void word_segment_normalize(const string_t *input, string_t *output)
+void word_segment_normalize(const string_t *input, string_t *output)
 {
     unsigned char *p;
     unsigned char *end;
@@ -346,11 +366,100 @@ void word_segment_destroy(WordSegmentContext *context)
     fast_mpool_destroy(&context->string_allocator);
 }
 
+#define SET_KEYWORD_INFO(kinfo) \
+    do {  \
+        if (kinfo - keywords >= MAX_KEYWORDS) {  \
+            logWarning("file: "__FILE__", line: %d, " \
+                    "too many keywords exceeds %d",   \
+                    __LINE__, MAX_KEYWORDS);          \
+            p = save_point = end;  \
+            break;  \
+        } \
+        kinfo->offset = start - output->holder.str;  \
+        kinfo->keyword.str = (char *)start;          \
+        kinfo->keyword.len = p - start;              \
+        kinfo++; \
+    } while (0)
+
+static int word_segment_do_split(WordSegmentContext *context,
+        WordSegmentArray *output)
+{
+#define MAX_KEYWORDS  32
+    string_t word;
+    string_t keyword;
+    KeywordInfo keywords[MAX_KEYWORDS];
+    KeywordInfo *kinfo;
+    int count;
+    char buff[128];
+    const char *p;
+    const char *end;
+    const char *start;
+    const char *save_point;
+    int i;
+    int chinese_chars;
+    bool is_chinese;
+
+    kinfo = keywords;
+    keyword.str = buff;
+    p = output->holder.str;
+    end = output->holder.str + output->holder.len;
+    i = 0;
+    while (p < end) {
+        start = p;
+        if (next_word(&p, end, &word, &is_chinese) != 0) {
+            continue;
+        }
+        if (!is_chinese) {
+            if (find_keyword(context, &word) != NULL) {
+                SET_KEYWORD_INFO(kinfo);
+            }
+            continue;
+        }
+
+        keyword.len = 0;
+        chinese_chars = 1;
+        save_point = p;
+        while (true) {
+            memcpy(keyword.str + keyword.len, word.str, word.len);
+            keyword.len += word.len;
+
+            logInfo("find: %.*s", keyword.len, keyword.str);
+            if (find_keyword(context, &keyword) != NULL) {
+                SET_KEYWORD_INFO(kinfo);
+            }
+
+            if (++chinese_chars > context->max_chinese_chars) {
+                break;
+            }
+
+            while (p < end && *p == ' ') {
+                p++;
+            }
+            if (next_word(&p, end, &word, &is_chinese) != 0) {
+                break;
+            }
+            if (!is_chinese) {
+                break;
+            }
+        }
+
+        p = save_point;  //rewind
+    }
+
+    count = kinfo - keywords;
+    logInfo("keyword count: %d", count);
+    for (i=0; i<count; i++) {
+        logInfo("offset: %d, %.*s(%d)", keywords[i].offset,
+                keywords[i].keyword.len, keywords[i].keyword.str,
+                keywords[i].keyword.len);
+    }
+
+    return 0;
+}
+
 int word_segment_split(WordSegmentContext *context, const string_t *input,
         WordSegmentArray *output)
 {
-    WordSegmentHashEntry *hentry;
-
     if (input->len <= sizeof(output->buff)) {
         output->holder.str = output->buff;
     } else {
@@ -363,14 +472,7 @@ int word_segment_split(WordSegmentContext *context, const string_t *input,
     }
 
     word_segment_normalize(input, &output->holder);
-    hentry = find_keyword(context, &output->holder);
-    if (hentry != NULL) {
-        printf("found %.*s\n", output->holder.len, output->holder.str);
-    } else {
-        printf("NOT found %.*s\n", output->holder.len, output->holder.str);
-    }
-
-    return 0;
+    return word_segment_do_split(context, output);
 }
 
 void word_segment_free_result(WordSegmentArray *array)
