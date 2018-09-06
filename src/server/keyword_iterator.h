@@ -16,8 +16,17 @@ typedef struct keyword_array {
     int count;
 } KeywordArray;
 
-typedef struct keyword_iterator_group {
+typedef struct combine_keyword_info {
+    struct {
+        int start;
+        int end;
+    } offset;
+    int count;
     string_t keywords[MAX_KEYWORDS_COUNT];
+} CombineKeywordInfo;
+
+typedef struct keyword_iterator_group {
+    CombineKeywordInfo comb_keywords[MAX_KEYWORDS_COUNT];
     int count;
     int index;
 } KeywordIteratorGroup;

@@ -1,6 +1,6 @@
 .SUFFIXES: .c .o
 
-COMPILE = $(CC)  -Wall -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -g -O2 -DDEBUG_FLAG
+COMPILE = $(CC)  -Wall -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -g -O1 -DDEBUG_FLAG
 INC_PATH = -I/usr/local/include -I..
 LIB_PATH =  -lfastcommon -lserverframe
 TARGET_PATH = /usr/bin
