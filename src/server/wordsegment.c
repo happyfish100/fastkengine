@@ -415,41 +415,6 @@ static int compare_string(const void *p1, const void *p2)
     return fc_string_compare((const string_t *)p1, (const string_t *)p2);
 }
 
-static bool word_segment_is_overlapp(CombineKeywordInfo *key1,
-        CombineKeywordInfo *key2)
-{
-    if (key1->offset.start == key2->offset.start) {
-        return true;
-    } if (key1->offset.start < key2->offset.start) {
-        return key1->offset.end > key2->offset.start;
-    } else {
-        return key2->offset.end > key1->offset.start;
-    }
-}
-
-static void append_keywords(CombineKeywordInfo *dest,
-        const CombineKeywordInfo *append)
-{
-    int i;
-    if (append->offset.start < dest->offset.start) {
-        dest->offset.start = append->offset.start;
-    }
-    if (append->offset.end > dest->offset.end) {
-        dest->offset.end = append->offset.end;
-    }
-
-    for (i=0; i<append->count; i++) {
-        if (dest->count >= MAX_KEYWORDS_COUNT) {
-            logWarning("file: "__FILE__", line: %d, "
-                    "keywords exceeds %d",
-                    __LINE__, MAX_KEYWORDS_COUNT);
-            break;
-        }
-        dest->keywords[dest->count++] = append->keywords[i];
-    }
-    qsort(dest->keywords, dest->count, sizeof(string_t), compare_string);
-}
-
 static bool combo_keywords_equals(CombineKeywordInfo *combo1,
         CombineKeywordInfo *combo2)
 {
@@ -472,37 +437,37 @@ static bool combo_keywords_equals(CombineKeywordInfo *combo1,
     return true;
 }
 
-static bool combo_keywords_exist(KeywordIteratorGroup *group,
+static bool combo_keywords_exist(ComboKeywordGroup *group,
         CombineKeywordInfo *combo_keyword)
 {
     int i;
 
     for (i=0; i<group->count; i++) {
-        if (combo_keywords_equals(group->comb_keywords + i, combo_keyword)) {
+        if (combo_keywords_equals(group->rows + i, combo_keyword)) {
             return true;
         }
     }
     return false;
 }
 
-static void combine_nearby_two_keywords(KeywordIteratorGroup *group,
-        KeywordIteratorGroup *combined, KeywordIteratorGroup *single)
+static void combine_nearby_two_keywords(ComboKeywordGroup *group,
+        ComboKeywordGroup *combined, ComboKeywordGroup *single)
 {
     int i, k;
     int keyword_count;
-    CombineKeywordInfo *comb_keywords;
+    CombineKeywordInfo *row;
     CombineKeywordInfo overlapps[MAX_KEYWORDS_COUNT];
 
     keyword_count = combined->count;
-    memcpy(overlapps, combined->comb_keywords,
+    memcpy(overlapps, combined->rows,
             sizeof(CombineKeywordInfo) * keyword_count);
 
     combined->count = 0;
 
     for (i=0; i<keyword_count; i++) {
         for (k=0; k<single->count; k++) {
-            if (!word_segment_is_overlapp(overlapps + i,
-                        single->comb_keywords + k))
+            if (!combo_keyword_is_overlapp(overlapps + i,
+                        single->rows + k))
             {
                 if (combined->count >= MAX_KEYWORDS_COUNT) {
                     logWarning("file: "__FILE__", line: %d, "
@@ -511,9 +476,9 @@ static void combine_nearby_two_keywords(KeywordIteratorGroup *group,
                     break;
                 }
 
-                comb_keywords = combined->comb_keywords + combined->count++;
-                *comb_keywords = overlapps[i];
-                append_keywords(comb_keywords, single->comb_keywords + k);
+                row = combined->rows + combined->count++;
+                *row = overlapps[i];
+                combo_keywords_append(row, single->rows + k);
                 break;
             }
         }
@@ -521,7 +486,7 @@ static void combine_nearby_two_keywords(KeywordIteratorGroup *group,
         if (k == single->count) {
             if (group->count < MAX_KEYWORDS_COUNT) {
                 if (!combo_keywords_exist(group, overlapps + i)) {
-                    group->comb_keywords[group->count++] = overlapps[i];
+                    group->rows[group->count++] = overlapps[i];
                 }
             } else {
                 logWarning("file: "__FILE__", line: %d, "
@@ -532,13 +497,13 @@ static void combine_nearby_two_keywords(KeywordIteratorGroup *group,
     }
 }
 
-static void word_segment_combine_nearby_keywords(KeywordIteratorGroup *group)
+static void word_segment_combine_nearby_keywords(ComboKeywordGroup *group)
 {
     int i, k;
     bool matched[MAX_KEYWORDS_COUNT];
-    KeywordIteratorGroup combined;
-    KeywordIteratorGroup single;
-    CombineKeywordInfo *comb_keywords;
+    ComboKeywordGroup combined;
+    ComboKeywordGroup single;
+    CombineKeywordInfo *row;
 
     single = *group;
     combined.count = 0;
@@ -547,20 +512,20 @@ static void word_segment_combine_nearby_keywords(KeywordIteratorGroup *group)
 
     for (i=0; i<single.count; i++) {
         for (k=i+1; k<single.count; k++) {
-            if (!word_segment_is_overlapp(single.comb_keywords + i,
-                        single.comb_keywords + k))
+            if (!combo_keyword_is_overlapp(single.rows + i,
+                        single.rows + k))
             {
                 matched[i] = matched[k] = true;
-                comb_keywords = combined.comb_keywords + combined.count++;
-                *comb_keywords = single.comb_keywords[i];
-                append_keywords(comb_keywords, single.comb_keywords + k);
+                row = combined.rows + combined.count++;
+                *row = single.rows[i];
+                combo_keywords_append(row, single.rows + k);
                 break;
             }
         }
 
         if (!matched[i]) {
             if (group->count < MAX_KEYWORDS_COUNT) {
-                group->comb_keywords[group->count++] = single.comb_keywords[i];
+                group->rows[group->count++] = single.rows[i];
             } else {
                 logWarning("file: "__FILE__", line: %d, "
                         "keywords exceeds %d",
@@ -582,8 +547,8 @@ static int word_segment_output(WordSegmentContext *context,
 {
     CombineKeywordInfo *p;
     CombineKeywordInfo *end;
-    KeywordIteratorContext iterator;
-    KeywordIteratorGroup *group;
+    KeywordIterator iterator;
+    ComboKeywordGroup *group;
     int end_offset;
     int end_offset1;
     int end_offset2;
@@ -592,12 +557,11 @@ static int word_segment_output(WordSegmentContext *context,
     int i;
 
     if (count == 0) {
-        output->count = 0;
+        output->result.count = 0;
         return ENOENT;
     } else if (count == 1) {
-        output->count = 1;
-        output->rows[0].count = 1;
-        output->rows[0].keywords[0] = keywords[0].keywords[0];
+        output->result.count = 1;
+        output->result.rows[0] = *keywords;
         return 0;
     }
 
@@ -625,7 +589,7 @@ static int word_segment_output(WordSegmentContext *context,
             break;
         }
 
-        group->comb_keywords[group->count++] = *p; //first keyword
+        group->rows[group->count++] = *p; //first keyword
         end_offset1 = p->offset.end;
         p++;
         if (p == end) {
@@ -636,7 +600,7 @@ static int word_segment_output(WordSegmentContext *context,
             continue;
         }
 
-        group->comb_keywords[group->count++] = *p; //second keyword
+        group->rows[group->count++] = *p; //second keyword
         end_offset2 = p->offset.end;
         p++;
 
@@ -659,7 +623,7 @@ static int word_segment_output(WordSegmentContext *context,
             }
 
             if (group->count < MAX_KEYWORDS_COUNT) {
-                group->comb_keywords[group->count++] = *p;
+                group->rows[group->count++] = *p;
             } else {
                 logWarning("file: "__FILE__", line: %d, "
                         "keywords exceeds %d",
@@ -684,17 +648,38 @@ static int word_segment_output(WordSegmentContext *context,
 
         for (k=0; k<iterator.groups[i].count; k++) {
             printf("start: %d, end: %d, keywords: ",
-                    iterator.groups[i].comb_keywords[k].offset.start,
-                    iterator.groups[i].comb_keywords[k].offset.end);
-            for (m=0; m<iterator.groups[i].comb_keywords[k].count; m++) {
-                printf("%.*s, ", iterator.groups[i].comb_keywords[k].keywords[m].len,
-                        iterator.groups[i].comb_keywords[k].keywords[m].str);
+                    iterator.groups[i].rows[k].offset.start,
+                    iterator.groups[i].rows[k].offset.end);
+            for (m=0; m<iterator.groups[i].rows[k].count; m++) {
+                printf("%.*s, ", iterator.groups[i].rows[k].keywords[m].len,
+                        iterator.groups[i].rows[k].keywords[m].str);
             }
             printf("\n");
         }
     }
 
-    //TODO DO iterator!!!
+    keyword_iterator_expand(&iterator, &output->result);
+
+    printf("\nkeywords count: %d\n", output->result.count);
+    for (i=0; i<output->result.count; i++) {
+        int k;
+
+        /*
+        qsort(output->result.rows[i].keywords,
+                output->result.rows[i].count,
+                sizeof(string_t), compare_string);
+                */
+
+        printf("row[%d] start: %d, end: %d, keywords: ", i,
+                output->result.rows[i].offset.start,
+                output->result.rows[i].offset.end);
+        for (k=0; k<output->result.rows[i].count; k++) {
+            printf("%.*s ", FC_PRINTF_STAR_STRING_PARAMS(output->result.rows[i].keywords[k]));
+        }
+        printf("\n");
+    }
+
+    //TODO DO filter!!!
 
     return 0;
 }

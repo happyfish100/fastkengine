@@ -1,5 +1,5 @@
 
-FastKEngine is a knowledge base engine.
+FastKEngine is a knowledge engine based keywords matching.
 
 * Format
 

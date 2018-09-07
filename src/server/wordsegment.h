@@ -35,11 +35,8 @@ typedef struct word_segment_context {
     struct fast_mpool_man  string_allocator;
 } WordSegmentContext;
 
-#define MAX_KEYWORDS_ROWS  (MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
-
 typedef struct word_segment_array {
-    KeywordArray rows[MAX_KEYWORDS_ROWS];
-    int count;
+    ComboKeywordGroup result;
 
     char buff[256];   //for internal use
     string_t holder;  //for internal use
