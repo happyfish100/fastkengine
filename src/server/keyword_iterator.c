@@ -29,14 +29,15 @@ void combo_keywords_append(CombineKeywordInfo *dest,
         dest->offset.end = append->offset.end;
     }
 
-    for (i=0; i<append->count; i++) {
-        if (dest->count >= MAX_KEYWORDS_COUNT) {
+    for (i=0; i<append->karray.count; i++) {
+        if (dest->karray.count >= MAX_KEYWORDS_COUNT) {
             logWarning("file: "__FILE__", line: %d, "
                     "keywords exceeds %d",
                     __LINE__, MAX_KEYWORDS_COUNT);
             break;
         }
-        dest->keywords[dest->count++] = append->keywords[i];
+        dest->karray.keywords[dest->karray.count++] =
+            append->karray.keywords[i];
     }
 }
 

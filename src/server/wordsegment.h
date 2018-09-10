@@ -10,12 +10,8 @@
 #include "fastcommon/common_define.h"
 #include "fastcommon/fast_mblock.h"
 #include "fastcommon/fast_mpool.h"
+#include "keyword_types.h"
 #include "keyword_iterator.h"
-
-typedef struct keyword_array {
-    string_t *keywords;
-    int count;
-} KeywordArray;
 
 typedef struct similar_keyword_input  {
     char **lines;
@@ -42,7 +38,7 @@ typedef struct word_segment_context {
 } WordSegmentContext;
 
 typedef struct word_segment_array {
-    ComboKeywordGroup results;
+    KeywordRecords results;
 
     char buff[256];   //for internal use
     string_t holder;  //for internal use
@@ -52,15 +48,17 @@ typedef struct word_segment_array {
 extern "C" {
 #endif
 
-    //the keyword only support Chinese
     int word_segment_init(WordSegmentContext *context, const int capacity,
-            const KeywordArray *keywords, const SimilarKeywordsInput *similars);
+            const SimilarKeywordsInput *similars);
+
+    int word_segment_add_keywords(WordSegmentContext *context,
+            const KeywordArray *keywords);
 
     void word_segment_destroy(WordSegmentContext *context);
 
     void word_segment_normalize(const string_t *input, string_t *output);
 
-    void keywords_unique(CombineKeywordInfo *combo);
+    void keywords_unique(KeywordArray *karray);
 
     int word_segment_split(WordSegmentContext *context, const string_t *input,
             WordSegmentArray *output);

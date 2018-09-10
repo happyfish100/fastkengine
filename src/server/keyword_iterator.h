@@ -8,9 +8,7 @@
 #include <string.h>
 #include <time.h>
 #include "fastcommon/common_define.h"
-
-#define MAX_KEYWORDS_COUNT      5
-#define MAX_KEYWORDS_ROWS  (MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
+#include "keyword_types.h"
 
 typedef struct combine_keyword_info {
     struct {
@@ -18,8 +16,7 @@ typedef struct combine_keyword_info {
         int end;
     } offset;
 
-    int count;
-    string_t keywords[MAX_KEYWORDS_COUNT];
+    KeywordArray karray;
 } CombineKeywordInfo;
 
 typedef struct combo_keyword_group {

@@ -23,7 +23,7 @@
 #include "sf/sf_service.h"
 #include "sf/sf_util.h"
 #include "wordsegment.h"
-#include "similar_words.h"
+#include "keyword_index.h"
 //#include "common/fcfg_proto.h"
 //#include "common/fcfg_types.h"
 
@@ -167,6 +167,7 @@ static int test_segment()
     int64_t file_size;
     int result;
     int row_count;
+    int remain_count;
     int i;
     char **rows;
     KeywordArray keywords;
@@ -183,13 +184,6 @@ static int test_segment()
     }
 
     rows = split(keywords_buff, '\n', 0, &row_count);
-    keywords.count = row_count - 1;
-    keywords.keywords = (string_t *)malloc(sizeof(string_t) * row_count);
-    for (i=0; i<row_count; i++) {
-        keywords.keywords[i].str = rows[i];
-        keywords.keywords[i].len = strlen(rows[i]);
-    }
-
     if ((result=getFileContent(similars_filename, &similars_buff, &file_size)) != 0) {
         return result;
     }
@@ -197,23 +191,35 @@ static int test_segment()
     similars.lines = split(similars_buff, '\n', 0, &similars.count);
     similars.seperator = ' ';
 
-    result = word_segment_init(&context, 102400,
-            &keywords, &similars);
 
-    index = (int)((int64_t)rand() * keywords.count / (int64_t)RAND_MAX);
+    result = word_segment_init(&context, 102400, &similars);
+    remain_count = row_count - 1;
+    index = 0;
+    while (remain_count > 0) {
+        keywords.count = remain_count > MAX_KEYWORDS_COUNT ?
+            MAX_KEYWORDS_COUNT : remain_count;
+        remain_count -= keywords.count;
+        for (i=0; i<keywords.count; i++) {
+            FC_SET_STRING(keywords.keywords[i], rows[index]);
+            index++;
+        }
+        result = word_segment_add_keywords(&context, &keywords);
+    }
+
+    index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
     input = keywords.keywords[index];
 
     //input.str = "查 找 文 件 列  表";
-    input.str = "中华人民共和国 中华 万岁";
+    input.str = "中华 人民 共和国 中华 万岁";
     input.len = strlen(input.str);
 
     logInfo("row_count: %d, index: %d, %.*s", row_count, index, input.len, input.str);
     word_segment_split(&context, &input, &output);
 
     {
-        ComboKeywordGroup *results;
-        CombineKeywordInfo *p;
-        CombineKeywordInfo *end;
+        KeywordRecords *results;
+        KeywordArray *p;
+        KeywordArray *end;
 
         results = &output.results;
         printf("\nkeywords count: %d\n", results->count);
@@ -222,9 +228,7 @@ static int test_segment()
         for (p=results->rows; p<end; p++) {
             int k;
 
-            printf("row[%d] start: %d, end: %d, keywords: ", i++,
-                    p->offset.start,
-                    p->offset.end);
+            printf("row[%d], keywords: ", i++);
             for (k=0; k<p->count; k++) {
                 printf("%.*s ", FC_PRINTF_STAR_STRING_PARAMS(p->keywords[k]));
             }
@@ -236,51 +240,4 @@ static int test_segment()
     word_segment_free_result(&output);
 
     return result;
-}
-
-int test_similar_words()
-{
-    char *buff;
-    int64_t file_size;
-    int result;
-    int row_count;
-    int col_count;
-    int row_index;
-    int col_index;
-    char **lines;
-    char **cols;
-    char *line;
-    string_t keyword;
-    const string_t *similar;
-    SimilarWordsContext context;
-    const char *filename = "/Users/yuqing/Devel/fastkengine/conf/similars.txt";
-
-    if ((result=getFileContent(filename, &buff, &file_size)) != 0) {
-        return result;
-    }
-
-    lines = split(buff, '\n', 0, &row_count);
-
-    row_index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
-    line = strdup(lines[row_index]);
-
-    cols = split(line, ' ', 0,  &col_count); 
-    col_index = (int)((int64_t)rand() * col_count / (int64_t)RAND_MAX);
-    FC_SET_STRING(keyword, cols[col_index]);
-
-    if ((result=similar_words_init(&context, 10240, lines, row_count - 1, ' ')) != 0) {
-        return result;
-    }
-
-    similar = similar_words_find(&context, &keyword);
-    logInfo("row_count: %d, row_index: %d, col_index: %d, "
-            "keyword: %.*s", row_count, row_index, col_index,
-            keyword.len, keyword.str);
-
-    if (similar != NULL) {
-        logInfo("similar: %.*s", similar->len, similar->str);
-    }
-
-    similar_words_destroy(&context);
-    return 0;
 }

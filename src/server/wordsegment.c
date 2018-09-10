@@ -122,7 +122,7 @@ static int insert_hentry(WordSegmentContext *context,
             return 0;
         }
 
-        logError("file: "__FILE__", line: %d, "
+        logWarning("file: "__FILE__", line: %d, "
                 "keyword %.*s already exists, similar is: %.*s",
                 __LINE__, keyword->len, keyword->str,
                 hentry->similar.len, hentry->similar.str);
@@ -258,30 +258,16 @@ static int similar_keywords_init(WordSegmentContext *context,
     return result;
 }
 
-int word_segment_init(WordSegmentContext *context, const int capacity,
-        const KeywordArray *keywords, const SimilarKeywordsInput *similars)
+int word_segment_add_keywords(WordSegmentContext *context,
+        const KeywordArray *keywords)
 {
+    int result;
     const string_t *key;
     const string_t *end;
-    int result;
     int char_count;
     bool pure_chinese;
 
-    if ((result=fast_mblock_init_ex(&context->hentry_allocator,
-            sizeof(WordSegmentHashEntry), 102400, NULL, false)) != 0)
-    {
-        return result;
-    }
-    
-    if ((result=fast_mpool_init(&context->string_allocator, 0, 32)) != 0) {
-        return result;
-    }
-    
-    if ((result=hashtable_init(context, capacity)) != 0) {
-        return result;
-    }
-
-    context->max_chinese_chars = 0;
+    result = 0;
     end = keywords->keywords + keywords->count;
     for (key=keywords->keywords; key<end; key++) {
         if ((result=insert_hentry(context, key, key, true)) == 0) {
@@ -299,6 +285,29 @@ int word_segment_init(WordSegmentContext *context, const int capacity,
     }
 
     logInfo("max_chinese_chars: %d", context->max_chinese_chars);
+    return result;
+}
+
+int word_segment_init(WordSegmentContext *context, const int capacity,
+        const SimilarKeywordsInput *similars)
+{
+    int result;
+
+    if ((result=fast_mblock_init_ex(&context->hentry_allocator,
+            sizeof(WordSegmentHashEntry), 102400, NULL, false)) != 0)
+    {
+        return result;
+    }
+    
+    if ((result=fast_mpool_init(&context->string_allocator, 0, 32)) != 0) {
+        return result;
+    }
+    
+    if ((result=hashtable_init(context, capacity)) != 0) {
+        return result;
+    }
+
+    context->max_chinese_chars = 0;
     return similar_keywords_init(context, similars);
 }
 
@@ -409,7 +418,7 @@ static int compare_string(const void *p1, const void *p2)
     return fc_string_compare((const string_t *)p1, (const string_t *)p2);
 }
 
-static int compare_combine_keyword(const void *p1, const void *p2)
+static int compare_combo_keywords(const void *p1, const void *p2)
 {
     int i;
     int result;
@@ -418,14 +427,14 @@ static int compare_combine_keyword(const void *p1, const void *p2)
 
     key1 = (const CombineKeywordInfo *)p1;
     key2 = (const CombineKeywordInfo *)p2;
-    if (key1->count < key2->count) {
+    if (key1->karray.count < key2->karray.count) {
         return 1;
-    } else if (key1->count > key2->count) {
+    } else if (key1->karray.count > key2->karray.count) {
         return -1;
     } else {
-        for (i=0; i<key1->count; i++) {
-            if ((result=fc_string_compare(key1->keywords + i,
-                            key2->keywords + i)) != 0)
+        for (i=0; i<key1->karray.count; i++) {
+            if ((result=fc_string_compare(key1->karray.keywords + i,
+                            key2->karray.keywords + i)) != 0)
             {
                 return result;
             }
@@ -439,7 +448,7 @@ static bool combo_keywords_equals(CombineKeywordInfo *combo1,
         CombineKeywordInfo *combo2)
 {
     int i;
-    if (combo1->count != combo2->count) {
+    if (combo1->karray.count != combo2->karray.count) {
         return false;
     }
 
@@ -449,8 +458,10 @@ static bool combo_keywords_equals(CombineKeywordInfo *combo1,
         return false;
     }
 
-    for (i=0; i<combo1->count; i++) {
-        if (!fc_string_equal(combo1->keywords + i, combo2->keywords + i)) {
+    for (i=0; i<combo1->karray.count; i++) {
+        if (!fc_string_equal(combo1->karray.keywords + i,
+                    combo2->karray.keywords + i))
+        {
             return false;
         }
     }
@@ -561,14 +572,14 @@ static void word_segment_combine_nearby_keywords(ComboKeywordGroup *group)
     }
 }
 
-void keywords_unique(CombineKeywordInfo *combo)
+void keywords_unique(KeywordArray *karray)
 {
     string_t *p;
     string_t *end;
     string_t *dest;
 
-    end = combo->keywords + combo->count;
-    p = dest = combo->keywords + 1;
+    end = karray->keywords + karray->count;
+    p = dest = karray->keywords + 1;
     while (p < end) {
         if (compare_string(p, p - 1) != 0) {
             if (dest != p) {
@@ -579,46 +590,50 @@ void keywords_unique(CombineKeywordInfo *combo)
         p++;
     }
 
-    combo->count = dest - combo->keywords;
+    karray->count = dest - karray->keywords;
 }
 
-static void output_results_unique(ComboKeywordGroup *results)
+static void keyword_records_unique(KeywordRecords *results)
 {
-    CombineKeywordInfo *p;
-    CombineKeywordInfo *end;
-    CombineKeywordInfo *dest;
+    KeywordArray *p;
+    KeywordArray *end;
 
     end = results->rows + results->count;
-    for (p=results->rows; p<end; p++) {
-        qsort(p->keywords,
-                p->count,
-                sizeof(string_t), compare_string);
-    }
-
-    if (results->count > 1) {
-        qsort(results->rows, results->count, sizeof(CombineKeywordInfo),
-                compare_combine_keyword);
-
-        p = dest = results->rows + 1;
-        while (p < end) {
-            if (compare_combine_keyword(p, p - 1) != 0) {
-                if (dest != p) {
-                    *dest = *p;
-                }
-                dest++;
-            }
-            p++;
-        }
-
-        results->count = dest - results->rows;
-        end = results->rows + results->count;
-    }
-
     for (p=results->rows; p<end; p++) {
         if (p->count > 1) {
             keywords_unique(p);
         }
     }
+}
+
+static void output_results_unique(ComboKeywordGroup *combo_results,
+        KeywordRecords *results)
+{
+    CombineKeywordInfo *p;
+    CombineKeywordInfo *end;
+    KeywordArray *dest;
+
+    end = combo_results->rows + combo_results->count;
+    for (p=combo_results->rows; p<end; p++) {
+        qsort(p->karray.keywords,
+                p->karray.count,
+                sizeof(string_t), compare_string);
+    }
+
+    qsort(combo_results->rows, combo_results->count,
+            sizeof(CombineKeywordInfo), compare_combo_keywords);
+
+    dest = results->rows;
+    *dest++ = combo_results->rows[0].karray;
+    p = combo_results->rows + 1;
+    while (p < end) {
+        if (compare_combo_keywords(p, p - 1) != 0) {
+            *dest++ = p->karray;
+        }
+        p++;
+    }
+    results->count = dest - results->rows;
+    keyword_records_unique(results);
 }
 
 static int word_segment_output(WordSegmentContext *context,
@@ -629,6 +644,7 @@ static int word_segment_output(WordSegmentContext *context,
     CombineKeywordInfo *end;
     KeywordIterator iterator;
     ComboKeywordGroup *group;
+    ComboKeywordGroup combo_results;
     int end_offset;
     int end_offset1;
     int end_offset2;
@@ -641,7 +657,7 @@ static int word_segment_output(WordSegmentContext *context,
         return ENOENT;
     } else if (count == 1) {
         output->results.count = 1;
-        output->results.rows[0] = *keywords;
+        output->results.rows[0] = keywords->karray;
         return 0;
     }
 
@@ -650,8 +666,8 @@ static int word_segment_output(WordSegmentContext *context,
     logInfo("keyword count: %d", count);
     for (i=0; i<count; i++) {
         logInfo("offset: %d, %.*s(%d)", keywords[i].offset.start,
-                keywords[i].keywords[0].len, keywords[i].keywords[0].str,
-                keywords[i].keywords[0].len);
+                FC_PRINTF_STAR_STRING_PARAMS(keywords[i].karray.keywords[0]),
+                keywords[i].karray.keywords[0].len);
     }
 
     p = keywords;
@@ -730,16 +746,16 @@ static int word_segment_output(WordSegmentContext *context,
             printf("start: %d, end: %d, keywords: ",
                     iterator.groups[i].rows[k].offset.start,
                     iterator.groups[i].rows[k].offset.end);
-            for (m=0; m<iterator.groups[i].rows[k].count; m++) {
-                printf("%.*s, ", iterator.groups[i].rows[k].keywords[m].len,
-                        iterator.groups[i].rows[k].keywords[m].str);
+            for (m=0; m<iterator.groups[i].rows[k].karray.count; m++) {
+                printf("%.*s, ", FC_PRINTF_STAR_STRING_PARAMS(
+                            iterator.groups[i].rows[k].karray.keywords[m]));
             }
             printf("\n");
         }
     }
 
-    keyword_iterator_expand(&iterator, &output->results);
-    output_results_unique(&output->results);
+    keyword_iterator_expand(&iterator, &combo_results);
+    output_results_unique(&combo_results, &output->results);
 
     return 0;
 }
@@ -756,8 +772,8 @@ static int word_segment_output(WordSegmentContext *context,
         logInfo("FOUND kEYWORD: %.*s", (int)(p - start), start);     \
         kinfo->offset.start = start - output->holder.str; \
         kinfo->offset.end = p - output->holder.str;       \
-        kinfo->keywords[0] = hentry->similar;             \
-        kinfo->count = 1;  \
+        kinfo->karray.keywords[0] = hentry->similar;             \
+        kinfo->karray.count = 1;  \
         kinfo++; \
     } while (0)
 
