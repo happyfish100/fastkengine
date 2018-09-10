@@ -31,7 +31,6 @@ static bool daemon_mode = true;
 static int setup_server_env(const char *config_filename);
 
 static int test_segment();
-static int test_similar_words();
 
 int main(int argc, char *argv[])
 {
@@ -76,7 +75,7 @@ int main(int argc, char *argv[])
     srand(time(NULL));
     rand();
 
-    r = test_similar_words();
+    //r = test_similar_words();
     r = test_segment();
     return r;
 
@@ -163,42 +162,75 @@ static int setup_server_env(const char *config_filename)
 
 static int test_segment()
 {
-    char *buff;
+    char *keywords_buff;
+    char *similars_buff;
     int64_t file_size;
     int result;
     int row_count;
     int i;
     char **rows;
-    string_t *keywords;
+    KeywordArray keywords;
+    SimilarKeywordsInput similars;
     WordSegmentContext context;
     string_t input;
     WordSegmentArray output;
     int index;
-    const char *filename = "/Users/yuqing/Devel/fastkengine/conf/keywords.txt";
+    const char *keywords_filename = "/Users/yuqing/Devel/fastkengine/conf/keywords.txt";
+    const char *similars_filename = "/Users/yuqing/Devel/fastkengine/conf/similars.txt";
 
-    if ((result=getFileContent(filename, &buff, &file_size)) != 0) {
+    if ((result=getFileContent(keywords_filename, &keywords_buff, &file_size)) != 0) {
         return result;
     }
 
-    rows = split(buff, '\n', 0, &row_count);
-    keywords = (string_t *)malloc(sizeof(string_t) * row_count);
+    rows = split(keywords_buff, '\n', 0, &row_count);
+    keywords.count = row_count - 1;
+    keywords.keywords = (string_t *)malloc(sizeof(string_t) * row_count);
     for (i=0; i<row_count; i++) {
-        keywords[i].str = rows[i];
-        keywords[i].len = strlen(rows[i]);
+        keywords.keywords[i].str = rows[i];
+        keywords.keywords[i].len = strlen(rows[i]);
     }
 
-    result = word_segment_init(&context, 1024,
-            keywords, row_count);
+    if ((result=getFileContent(similars_filename, &similars_buff, &file_size)) != 0) {
+        return result;
+    }
 
-    index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
-    input = keywords[index];
+    similars.lines = split(similars_buff, '\n', 0, &similars.count);
+    similars.seperator = ' ';
+
+    result = word_segment_init(&context, 102400,
+            &keywords, &similars);
+
+    index = (int)((int64_t)rand() * keywords.count / (int64_t)RAND_MAX);
+    input = keywords.keywords[index];
 
     //input.str = "查 找 文 件 列  表";
-    input.str = "中华人民共和国万岁";
+    input.str = "中华人民共和国 中华 万岁";
     input.len = strlen(input.str);
 
     logInfo("row_count: %d, index: %d, %.*s", row_count, index, input.len, input.str);
     word_segment_split(&context, &input, &output);
+
+    {
+        ComboKeywordGroup *results;
+        CombineKeywordInfo *p;
+        CombineKeywordInfo *end;
+
+        results = &output.results;
+        printf("\nkeywords count: %d\n", results->count);
+        i = 0;
+        end = results->rows + results->count;
+        for (p=results->rows; p<end; p++) {
+            int k;
+
+            printf("row[%d] start: %d, end: %d, keywords: ", i++,
+                    p->offset.start,
+                    p->offset.end);
+            for (k=0; k<p->count; k++) {
+                printf("%.*s ", FC_PRINTF_STAR_STRING_PARAMS(p->keywords[k]));
+            }
+            printf("\n");
+        }
+    }
 
     freeSplit(rows);
     word_segment_free_result(&output);
@@ -206,7 +238,7 @@ static int test_segment()
     return result;
 }
 
-static int test_similar_words()
+int test_similar_words()
 {
     char *buff;
     int64_t file_size;

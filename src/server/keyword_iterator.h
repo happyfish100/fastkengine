@@ -12,11 +12,6 @@
 #define MAX_KEYWORDS_COUNT      5
 #define MAX_KEYWORDS_ROWS  (MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
 
-typedef struct keyword_array {
-    string_t keywords[MAX_KEYWORDS_COUNT];
-    int count;
-} KeywordArray;
-
 typedef struct combine_keyword_info {
     struct {
         int start;
@@ -27,7 +22,7 @@ typedef struct combine_keyword_info {
     string_t keywords[MAX_KEYWORDS_COUNT];
 } CombineKeywordInfo;
 
-typedef struct keyword_iterator_group {
+typedef struct combo_keyword_group {
     CombineKeywordInfo rows[MAX_KEYWORDS_ROWS];
     int count;
 } ComboKeywordGroup;

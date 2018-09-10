@@ -6,8 +6,7 @@
 #include "fastcommon/shared_func.h"
 #include "wordsegment.h"
 
-static int hashtable_init(WordSegmentContext *context,
-        WordSegmentHashTable **htable, const int capacity)
+static int hashtable_init(WordSegmentContext *context, const int capacity)
 {
     unsigned int *pcapacity;
     int bytes;
@@ -19,39 +18,31 @@ static int hashtable_init(WordSegmentContext *context,
         return EOVERFLOW;
     }
 
-    *htable = (WordSegmentHashTable *)fast_mblock_alloc_object(
-            &context->htable_allocator);
-    if (*htable == NULL) {
-        logError("file: "__FILE__", line: %d, "
-                "alloc hashtable fail", __LINE__);
-        return ENOMEM;
-    }
-
-    (*htable)->capacity = *pcapacity;
-    bytes = sizeof(struct word_segment_hash_entry *) * (*htable)->capacity;
-    (*htable)->buckets = (struct word_segment_hash_entry **)malloc(bytes);
-    if ((*htable)->buckets == NULL) {
+    context->htable.capacity = *pcapacity;
+    bytes = sizeof(struct word_segment_hash_entry *) * context->htable.capacity;
+    context->htable.buckets = (struct word_segment_hash_entry **)malloc(bytes);
+    if (context->htable.buckets == NULL) {
         logError("file: "__FILE__", line: %d, "
                 "malloc %d bytes fail", __LINE__, bytes);
         return ENOMEM;
     }
 
-    memset((*htable)->buckets, 0, bytes);
+    memset(context->htable.buckets, 0, bytes);
     return 0;
 }
 
-static WordSegmentHashEntry *hashtable_find(WordSegmentHashTable *htable,
-        const string_t *ch)
+static WordSegmentHashEntry *hashtable_find(WordSegmentContext *context,
+        const string_t *keyword)
 {
     WordSegmentHashEntry *current;
     unsigned int hash_code;
     unsigned int index;
 
-    hash_code = simple_hash(ch->str, ch->len);
-    index = hash_code % htable->capacity;
-    current = htable->buckets[index];
+    hash_code = simple_hash(keyword->str, keyword->len);
+    index = hash_code % context->htable.capacity;
+    current = context->htable.buckets[index];
     while (current != NULL) {
-        if (fc_string_equal(&current->ch, ch)) {
+        if (fc_string_equal(&current->keyword, keyword)) {
             return current;
         }
         current = current->next;
@@ -60,11 +51,28 @@ static WordSegmentHashEntry *hashtable_find(WordSegmentHashTable *htable,
     return NULL;
 }
 
+
+static int alloc_string(WordSegmentContext *context, string_t *dest,
+        const string_t *src)
+{
+    dest->str = (char *)fast_mpool_alloc(&context->string_allocator, src->len);
+    if (dest->str == NULL) {
+        logError("file: "__FILE__", line: %d, "
+                "alloc %d bytes from mpool fail", __LINE__, src->len);
+        return ENOMEM;
+    }
+
+    memcpy(dest->str, src->str, src->len);
+    dest->len = src->len;
+    return 0;
+}
+
 static WordSegmentHashEntry *hashtable_insert(WordSegmentContext *context,
-        WordSegmentHashTable *htable, const string_t *ch, const bool is_keyword)
+        const string_t *keyword, const string_t *similar)
 {
     WordSegmentHashEntry *hentry;
     unsigned int hash_code;
+    int result;
     unsigned int index;
 
     hentry = (WordSegmentHashEntry *)fast_mblock_alloc_object(
@@ -75,48 +83,53 @@ static WordSegmentHashEntry *hashtable_insert(WordSegmentContext *context,
         return NULL;
     }
 
-    hentry->ch.str = (char *)fast_mpool_alloc(&context->string_allocator, ch->len);
-    if (hentry->ch.str == NULL) {
-        logError("file: "__FILE__", line: %d, "
-                "alloc %d bytes from mpool fail", __LINE__, ch->len);
+    if ((result=alloc_string(context, &hentry->keyword, keyword)) != 0) {
         return NULL;
     }
 
-    memcpy(hentry->ch.str, ch->str, ch->len);
-    hentry->ch.len = ch->len;
-    hentry->is_keyword = is_keyword;
-
-    hash_code = simple_hash(ch->str, ch->len);
-    index = hash_code % htable->capacity;
-    hentry->next = htable->buckets[index];
-    htable->buckets[index] = hentry;
-    return hentry;
-}
-
-static WordSegmentHashEntry *insert_char(WordSegmentContext *context,
-        WordSegmentHashTable **htable, const int level,
-        const string_t *ch, const bool is_keyword)
-{
-    int capacity;
-    int result;
-    WordSegmentHashEntry *hentry;
-
-    if (*htable == NULL) {
-        capacity = context->top_capacity / level;
-        if ((result=hashtable_init(context, htable, capacity)) != 0) {
-            return NULL;
-        }
+    if (fc_string_equal(keyword, similar)) {
+        hentry->similar = hentry->keyword;
     } else {
-        hentry = hashtable_find(*htable, ch);
-        if (hentry != NULL) {
-            if (is_keyword && !hentry->is_keyword) {
-                hentry->is_keyword = is_keyword;
-            }
-            return hentry;
+        if ((result=alloc_string(context, &hentry->similar, similar)) != 0) {
+            return NULL;
         }
     }
 
-    return hashtable_insert(context, *htable, ch, is_keyword);
+    hash_code = simple_hash(keyword->str, keyword->len);
+    index = hash_code % context->htable.capacity;
+    hentry->next = context->htable.buckets[index];
+    context->htable.buckets[index] = hentry;
+    return hentry;
+}
+
+static int insert_hentry(WordSegmentContext *context,
+        const string_t *keyword, const string_t *similar,
+        const bool is_kv_same)
+{
+    WordSegmentHashEntry *hentry;
+    int result;
+
+    hentry = hashtable_find(context, keyword);
+    if (hentry != NULL) {
+        if (is_kv_same) {
+            return EEXIST;
+        }
+
+        if (fc_string_equal(&hentry->keyword, &hentry->similar)) {
+            if ((result=alloc_string(context, &hentry->similar, similar)) != 0) {
+                return result;
+            }
+            return 0;
+        }
+
+        logError("file: "__FILE__", line: %d, "
+                "keyword %.*s already exists, similar is: %.*s",
+                __LINE__, keyword->len, keyword->str,
+                hentry->similar.len, hentry->similar.str);
+        return EEXIST;
+    }
+
+    return hashtable_insert(context, keyword, similar) != NULL ? 0 : ENOMEM;
 }
 
 static int next_word(const char **pp, const char *end, string_t *ch,
@@ -171,94 +184,82 @@ static int next_word(const char **pp, const char *end, string_t *ch,
     }
 }
 
-static int insert_keyword(WordSegmentContext *context,
-        const string_t *keyword, bool *pure_chinese, int *char_count)
+static int keyword_char_count(const string_t *keyword, bool *pure_chinese)
 {
     string_t ch;
     const char *p;
     const char *end;
-    int i;
+    int char_count;
+    int i = 0;
     bool is_chinese;
-    WordSegmentHashTable **htable;
-    WordSegmentHashEntry *hentry;
 
     *pure_chinese = true;
-    *char_count = 0;
-    htable = &context->top;
+    char_count = 0;
     p = keyword->str;
     end = keyword->str + keyword->len;
 
-    i = 0;
     while (p < end) {
         if (next_word(&p, end, &ch, &is_chinese) != 0) {
             continue;
         }
 
         if (is_chinese) {
-            (*char_count)++;
+            char_count++;
         } else {
             *pure_chinese = false;
-            *char_count += ch.len;
+            char_count += ch.len;
         }
 
         logInfo("word[%d]: %.*s, last: %d, is_chinese: %d",
-                i, ch.len, ch.str, p == end, is_chinese);
-
-        if ((hentry=insert_char(context, htable, ++i,
-                        &ch, p == end)) == 0)
-        {
-            return ENOMEM;
-        }
-
-        htable = &hentry->children;
+                i++, ch.len, ch.str, p == end, is_chinese);
     }
 
-    return 0;
+    return char_count;
 }
 
-static WordSegmentHashEntry *find_keyword(WordSegmentContext *context,
-        const string_t *keyword)
+static int similar_keywords_init(WordSegmentContext *context,
+        const SimilarKeywordsInput *similars)
 {
-    string_t ch;
-    const char *p;
-    const char *end;
-    WordSegmentHashTable **htable;
-    WordSegmentHashEntry *hentry;
-    bool is_chinese;
+#define MAX_SIMILAR_WORDS_COUNT   128
 
-    htable = &context->top;
-    p = keyword->str;
-    end = keyword->str + keyword->len;
+    char **line;
+    char **end;
+    string_t word;
+    string_t similar;
+    char *keywords[MAX_SIMILAR_WORDS_COUNT];
+    int n;
+    int i;
+    int result = 0;
 
-    int i = 0;
-    while (p < end) {
-        if (next_word(&p, end, &ch, &is_chinese) != 0) {
+    end = similars->lines + similars->count;
+    for (line=similars->lines; line<end; line++) {
+        if (**line == '\0') {
+            continue;
+        }
+        n = splitEx(*line, similars->seperator, keywords, MAX_SIMILAR_WORDS_COUNT);
+        if (n <= 1) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "invalid similar keywords: %s", __LINE__, *line);
             continue;
         }
 
-        logInfo("finding WORD[%d]: %.*s, last: %d, is_chinese: %d",
-                i++, ch.len, ch.str, p == end, is_chinese);
-
-        hentry = hashtable_find(*htable, &ch);
-        if (hentry == NULL) {
-            return NULL;
-        }
-
-        if (p == end) {
-            return hentry->is_keyword ? hentry : NULL;
-        }
-
-        htable = &hentry->children;
-        if (*htable == NULL) {
-            return NULL;
+        FC_SET_STRING(similar, keywords[0]);
+        for (i=1; i<n; i++) {
+            FC_SET_STRING(word, keywords[i]);
+            if (!fc_string_equal(&word, &similar)) {
+                result = insert_hentry(context, &word, &similar, false);
+                if (result != 0) {
+                    break;
+                }
+            }
         }
     }
 
-    return NULL;
+    return result;
 }
 
-int word_segment_init(WordSegmentContext *context, const int top_capacity,
-        const string_t *keywords, const int count)
+int word_segment_init(WordSegmentContext *context, const int capacity,
+        const KeywordArray *keywords, const SimilarKeywordsInput *similars)
 {
     const string_t *key;
     const string_t *end;
@@ -266,36 +267,30 @@ int word_segment_init(WordSegmentContext *context, const int top_capacity,
     int char_count;
     bool pure_chinese;
 
-    context->top_capacity = top_capacity;
-    context->top = NULL;
-
     if ((result=fast_mblock_init_ex(&context->hentry_allocator,
             sizeof(WordSegmentHashEntry), 102400, NULL, false)) != 0)
     {
         return result;
     }
     
-    if ((result=fast_mblock_init_ex(&context->htable_allocator,
-            sizeof(WordSegmentHashEntry), 10240, NULL, false)) != 0)
-    {
-        return result;
-    }
-
-    if ((result=fast_mpool_init(&context->string_allocator, 0, 16)) != 0) {
+    if ((result=fast_mpool_init(&context->string_allocator, 0, 32)) != 0) {
         return result;
     }
     
+    if ((result=hashtable_init(context, capacity)) != 0) {
+        return result;
+    }
+
     context->max_chinese_chars = 0;
-    end = keywords + count;
-    for (key=keywords; key<end; key++) {
-        if ((result=insert_keyword(context, key, &pure_chinese,
-                        &char_count)) == 0)
-        {
+    end = keywords->keywords + keywords->count;
+    for (key=keywords->keywords; key<end; key++) {
+        if ((result=insert_hentry(context, key, key, true)) == 0) {
+            char_count = keyword_char_count(key, &pure_chinese);
             if (pure_chinese && char_count > context->max_chinese_chars) {
                 context->max_chinese_chars = char_count;
             }
         } else {
-            if (result == EINVAL) {
+            if (result == EINVAL || result == EEXIST) {
                 result = 0;
                 continue;
             }
@@ -304,7 +299,7 @@ int word_segment_init(WordSegmentContext *context, const int top_capacity,
     }
 
     logInfo("max_chinese_chars: %d", context->max_chinese_chars);
-    return result;
+    return similar_keywords_init(context, similars);
 }
 
 static void remove_spaces_after_chinese(string_t *input)
@@ -400,7 +395,6 @@ void word_segment_normalize(const string_t *input, string_t *output)
 void word_segment_destroy(WordSegmentContext *context)
 {
     fast_mblock_destroy(&context->hentry_allocator);
-    fast_mblock_destroy(&context->htable_allocator);
     fast_mpool_destroy(&context->string_allocator);
 }
 
@@ -413,6 +407,32 @@ static int compare_offset(const void *p1, const void *p2)
 static int compare_string(const void *p1, const void *p2)
 {
     return fc_string_compare((const string_t *)p1, (const string_t *)p2);
+}
+
+static int compare_combine_keyword(const void *p1, const void *p2)
+{
+    int i;
+    int result;
+    const CombineKeywordInfo *key1;
+    const CombineKeywordInfo *key2;
+
+    key1 = (const CombineKeywordInfo *)p1;
+    key2 = (const CombineKeywordInfo *)p2;
+    if (key1->count < key2->count) {
+        return 1;
+    } else if (key1->count > key2->count) {
+        return -1;
+    } else {
+        for (i=0; i<key1->count; i++) {
+            if ((result=fc_string_compare(key1->keywords + i,
+                            key2->keywords + i)) != 0)
+            {
+                return result;
+            }
+        }
+    }
+
+    return 0;
 }
 
 static bool combo_keywords_equals(CombineKeywordInfo *combo1,
@@ -541,6 +561,66 @@ static void word_segment_combine_nearby_keywords(ComboKeywordGroup *group)
     }
 }
 
+void keywords_unique(CombineKeywordInfo *combo)
+{
+    string_t *p;
+    string_t *end;
+    string_t *dest;
+
+    end = combo->keywords + combo->count;
+    p = dest = combo->keywords + 1;
+    while (p < end) {
+        if (compare_string(p, p - 1) != 0) {
+            if (dest != p) {
+                *dest = *p;
+            }
+            dest++;
+        }
+        p++;
+    }
+
+    combo->count = dest - combo->keywords;
+}
+
+static void output_results_unique(ComboKeywordGroup *results)
+{
+    CombineKeywordInfo *p;
+    CombineKeywordInfo *end;
+    CombineKeywordInfo *dest;
+
+    end = results->rows + results->count;
+    for (p=results->rows; p<end; p++) {
+        qsort(p->keywords,
+                p->count,
+                sizeof(string_t), compare_string);
+    }
+
+    if (results->count > 1) {
+        qsort(results->rows, results->count, sizeof(CombineKeywordInfo),
+                compare_combine_keyword);
+
+        p = dest = results->rows + 1;
+        while (p < end) {
+            if (compare_combine_keyword(p, p - 1) != 0) {
+                if (dest != p) {
+                    *dest = *p;
+                }
+                dest++;
+            }
+            p++;
+        }
+
+        results->count = dest - results->rows;
+        end = results->rows + results->count;
+    }
+
+    for (p=results->rows; p<end; p++) {
+        if (p->count > 1) {
+            keywords_unique(p);
+        }
+    }
+}
+
 static int word_segment_output(WordSegmentContext *context,
         CombineKeywordInfo *keywords, const int count,
         WordSegmentArray *output)
@@ -557,11 +637,11 @@ static int word_segment_output(WordSegmentContext *context,
     int i;
 
     if (count == 0) {
-        output->result.count = 0;
+        output->results.count = 0;
         return ENOENT;
     } else if (count == 1) {
-        output->result.count = 1;
-        output->result.rows[0] = *keywords;
+        output->results.count = 1;
+        output->results.rows[0] = *keywords;
         return 0;
     }
 
@@ -658,33 +738,13 @@ static int word_segment_output(WordSegmentContext *context,
         }
     }
 
-    keyword_iterator_expand(&iterator, &output->result);
-
-    printf("\nkeywords count: %d\n", output->result.count);
-    for (i=0; i<output->result.count; i++) {
-        int k;
-
-        /*
-        qsort(output->result.rows[i].keywords,
-                output->result.rows[i].count,
-                sizeof(string_t), compare_string);
-                */
-
-        printf("row[%d] start: %d, end: %d, keywords: ", i,
-                output->result.rows[i].offset.start,
-                output->result.rows[i].offset.end);
-        for (k=0; k<output->result.rows[i].count; k++) {
-            printf("%.*s ", FC_PRINTF_STAR_STRING_PARAMS(output->result.rows[i].keywords[k]));
-        }
-        printf("\n");
-    }
-
-    //TODO DO filter!!!
+    keyword_iterator_expand(&iterator, &output->results);
+    output_results_unique(&output->results);
 
     return 0;
 }
 
-#define SET_KEYWORD_INFO(kinfo) \
+#define SET_KEYWORD_INFO(kinfo, hentry) \
     do {  \
         if (kinfo - keywords >= MAX_KEYWORDS) {  \
             logWarning("file: "__FILE__", line: %d, " \
@@ -696,8 +756,7 @@ static int word_segment_output(WordSegmentContext *context,
         logInfo("FOUND kEYWORD: %.*s", (int)(p - start), start);     \
         kinfo->offset.start = start - output->holder.str; \
         kinfo->offset.end = p - output->holder.str;       \
-        kinfo->keywords[0].str = (char *)start;           \
-        kinfo->keywords[0].len = p - start;               \
+        kinfo->keywords[0] = hentry->similar;             \
         kinfo->count = 1;  \
         kinfo++; \
     } while (0)
@@ -710,6 +769,7 @@ static int word_segment_do_split(WordSegmentContext *context,
     string_t keyword;
     CombineKeywordInfo keywords[MAX_KEYWORDS];
     CombineKeywordInfo *kinfo;
+    WordSegmentHashEntry *hentry;
     int count;
     const char *p;
     const char *end;
@@ -729,8 +789,8 @@ static int word_segment_do_split(WordSegmentContext *context,
             continue;
         }
         if (!is_chinese) {
-            if (find_keyword(context, &word) != NULL) {
-                SET_KEYWORD_INFO(kinfo);
+            if ((hentry=hashtable_find(context, &word)) != NULL) {
+                SET_KEYWORD_INFO(kinfo, hentry);
             }
             continue;
         }
@@ -742,8 +802,8 @@ static int word_segment_do_split(WordSegmentContext *context,
         while (true) {
             keyword.len += word.len;
             logInfo("finding: %.*s(%d)", keyword.len, keyword.str, keyword.len);
-            if (find_keyword(context, &keyword) != NULL) {
-                SET_KEYWORD_INFO(kinfo);
+            if ((hentry=hashtable_find(context, &keyword)) != NULL) {
+                SET_KEYWORD_INFO(kinfo, hentry);
             }
 
             if (++chinese_chars > context->max_chinese_chars) {
