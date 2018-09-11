@@ -12,17 +12,13 @@
 #include "fastcommon/fast_mpool.h"
 #include "keyword_types.h"
 
-typedef struct question_entry {
+typedef struct question_buffer {
     string_t question;
     char buff[256];   //for internal use
-} QuestionEntry;
-
-typedef struct answer_entry {
-    string_t answer;
-} AnswerEntry;
+} QuestionBuffer;
 
 typedef struct keyword_index_hash_entry {
-    string_t question;
+    QuestionEntry question;
     AnswerEntry *answer;
     struct keyword_index_hash_entry *next;
 } KeywordIndexHashEntry;
@@ -49,8 +45,10 @@ extern "C" {
     int keyword_index_add(KeywordIndexContext *context,
             const KeywordArray *keywords, AnswerEntry *answer);
 
-    const AnswerEntry *keyword_index_find(KeywordIndexContext *context,
-            const KeywordArray *keywords);
+    int keyword_index_find(KeywordIndexContext *context,
+            const KeywordArray *keywords, QAEntry *qa);
+
+    int keyword_index_key_length(const KeywordArray *keywords);
 
 #ifdef __cplusplus
 }

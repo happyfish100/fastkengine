@@ -8,7 +8,23 @@
 
 #define KEYWORDS_SEPERATOR   '\x1'
 
-static int keywords_to_string(QuestionEntry *qentry,
+int keyword_index_key_length(const KeywordArray *keywords)
+{
+    int length;
+    int i;
+
+    if (keywords->count == 0) {
+        return 0;
+    }
+
+    length = keywords->count - 1;   //seperator characters
+    for (i=0; i<keywords->count; i++) {
+        length += keywords->keywords[i].len;
+    }
+    return length;
+}
+
+static int keywords_to_string(QuestionBuffer *qentry,
         const KeywordArray *keywords)
 {
     int i;
@@ -84,7 +100,7 @@ static KeywordIndexHashEntry *hashtable_find(KeywordIndexContext *context,
     index = hash_code % context->htable.capacity;
     current = context->htable.buckets[index];
     while (current != NULL) {
-        if (fc_string_equal(&current->question, question)) {
+        if (fc_string_equal(&current->question.q, question)) {
             return current;
         }
         current = current->next;
@@ -110,7 +126,7 @@ static int alloc_string(KeywordIndexContext *context, string_t *dest,
 }
 
 static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
-        const string_t *question, AnswerEntry *answer)
+        const string_t *question, AnswerEntry *answer, const int keywords_count)
 {
     KeywordIndexHashEntry *hentry;
     unsigned int hash_code;
@@ -125,9 +141,10 @@ static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
         return NULL;
     }
 
-    if ((result=alloc_string(context, &hentry->question, question)) != 0) {
+    if ((result=alloc_string(context, &hentry->question.q, question)) != 0) {
         return NULL;
     }
+    hentry->question.kcount = keywords_count;
     hentry->answer = answer;
 
     hash_code = simple_hash(question->str, question->len);
@@ -138,7 +155,8 @@ static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
 }
 
 static int insert_entry(KeywordIndexContext *context,
-        const string_t *question, AnswerEntry *answer)
+        const string_t *question, AnswerEntry *answer,
+        const int keywords_count)
 {
     KeywordIndexHashEntry *hentry;
 
@@ -150,7 +168,8 @@ static int insert_entry(KeywordIndexContext *context,
         return EEXIST;
     }
 
-    return hashtable_insert(context, question, answer) != NULL ? 0 : ENOMEM;
+    return hashtable_insert(context, question, answer, keywords_count)
+        != NULL ? 0 : ENOMEM;
 }
 
 int keyword_index_init(KeywordIndexContext *context, const int capacity)
@@ -185,29 +204,32 @@ void keyword_index_destroy(KeywordIndexContext *context)
 int keyword_index_add(KeywordIndexContext *context,
         const KeywordArray *keywords, AnswerEntry *answer)
 {
-    QuestionEntry qentry;
+    QuestionBuffer qentry;
     int result;
 
     if ((result=keywords_to_string(&qentry, keywords)) != 0) {
         return result;
     }
 
-    return insert_entry(context, &qentry.question, answer);
+    return insert_entry(context, &qentry.question, answer, keywords->count);
 }
 
-const AnswerEntry *keyword_index_find(KeywordIndexContext *context,
-        const KeywordArray *keywords)
+int keyword_index_find(KeywordIndexContext *context,
+        const KeywordArray *keywords, QAEntry *qa)
 {
-    QuestionEntry qentry;
+    int result;
+    QuestionBuffer qentry;
     KeywordIndexHashEntry *hentry;
 
-    if (keywords_to_string(&qentry, keywords) != 0) {
-        return NULL;
+    if ((result=keywords_to_string(&qentry, keywords)) != 0) {
+        return result;
     }
 
     if ((hentry=hashtable_find(context, &qentry.question)) == NULL) {
-        return NULL;
+        return ENOENT;
     }
 
-    return hentry->answer;
+    qa->question = &hentry->question;
+    qa->answer = hentry->answer;
+    return 0;
 }

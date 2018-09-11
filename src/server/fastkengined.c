@@ -24,6 +24,8 @@
 #include "sf/sf_util.h"
 #include "wordsegment.h"
 #include "keyword_index.h"
+#include "server_global.h"
+#include "question_search.h"
 //#include "common/fcfg_proto.h"
 //#include "common/fcfg_types.h"
 
@@ -172,9 +174,8 @@ static int test_segment()
     char **rows;
     KeywordArray keywords;
     SimilarKeywordsInput similars;
-    WordSegmentContext context;
-    string_t input;
-    WordSegmentArray output;
+    string_t question;
+    QAArray results;
     int index;
     const char *keywords_filename = "/Users/yuqing/Devel/fastkengine/conf/keywords.txt";
     const char *similars_filename = "/Users/yuqing/Devel/fastkengine/conf/similars.txt";
@@ -191,8 +192,10 @@ static int test_segment()
     similars.lines = split(similars_buff, '\n', 0, &similars.count);
     similars.seperator = ' ';
 
+    init_combination_index_arrays();
+    keyword_index_init(&g_server_vars.ki_context, 1024 * 1024);
 
-    result = word_segment_init(&context, 102400, &similars);
+    result = word_segment_init(&g_server_vars.ws_context, 102400, &similars);
     remain_count = row_count - 1;
     index = 0;
     while (remain_count > 0) {
@@ -203,41 +206,22 @@ static int test_segment()
             FC_SET_STRING(keywords.keywords[i], rows[index]);
             index++;
         }
-        result = word_segment_add_keywords(&context, &keywords);
+        result = word_segment_add_keywords(&g_server_vars.ws_context, &keywords);
     }
 
     index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
-    input = keywords.keywords[index];
+    question = keywords.keywords[index];
 
-    //input.str = "查 找 文 件 列  表";
-    input.str = "中华 人民 共和国 中华 万岁";
-    input.len = strlen(input.str);
+    //question.str = "查 找 文 件 列  表";
+    question.str = "中华 人民 共和国 中华 万岁";
+    question.len = strlen(question.str);
 
-    logInfo("row_count: %d, index: %d, %.*s", row_count, index, input.len, input.str);
-    word_segment_split(&context, &input, &output);
+    logInfo("row_count: %d, index: %d, %.*s", row_count, index, question.len, question.str);
 
-    {
-        KeywordRecords *results;
-        KeywordArray *p;
-        KeywordArray *end;
-
-        results = &output.results;
-        printf("\nkeywords count: %d\n", results->count);
-        i = 0;
-        end = results->rows + results->count;
-        for (p=results->rows; p<end; p++) {
-            int k;
-
-            printf("row[%d], keywords: ", i++);
-            for (k=0; k<p->count; k++) {
-                printf("%.*s ", FC_PRINTF_STAR_STRING_PARAMS(p->keywords[k]));
-            }
-            printf("\n");
-        }
+    if ((result=question_search(&question, &results)) != 0) {
+        return result;
     }
 
     freeSplit(rows);
-    word_segment_free_result(&output);
-
     return result;
 }
