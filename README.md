@@ -4,6 +4,8 @@ FastKEngine is a knowledge engine based keywords matching.
 * Format
 
 ```
+[[base id=###]]
+
 [[question id=###]]
   question1
   question2
@@ -44,6 +46,9 @@ FastKEngine is a knowledge engine based keywords matching.
 * Example
 
 ```
+
+[[base id=1101000000]]
+
 [[question id=123]]
   如何 生成 core-dump
   core-dump 设置

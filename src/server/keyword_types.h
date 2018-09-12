@@ -25,13 +25,26 @@ typedef struct keyword_records {
 } KeywordRecords;
 
 typedef struct question_entry {
-    string_t q;
+    string_t q;   //multi keywords splited by seperator
     int kcount;   //keywords count
 } QuestionEntry;
 
-typedef struct answer_entry {
+typedef struct condition_answer_entry {
+    struct {
+        key_value_pair_t *kv_pairs;
+        int count;
+    } conditions;
     string_t answer;
-    int id;
+} ConditionAnswerEntry;
+
+typedef struct condition_answer_array {
+    ConditionAnswerEntry *entries;  //[0] for no condition answer
+    int count;
+} ConditionAnswerArray;
+
+typedef struct answer_entry {
+    ConditionAnswerArray condition_answers;
+    int64_t id;
 } AnswerEntry;
 
 typedef struct question_answer_entry {

@@ -25,6 +25,7 @@
 #include "wordsegment.h"
 #include "keyword_index.h"
 #include "server_global.h"
+#include "qa_reader.h"
 #include "question_search.h"
 //#include "common/fcfg_proto.h"
 //#include "common/fcfg_types.h"
@@ -174,6 +175,7 @@ static int test_segment()
     char **rows;
     KeywordArray keywords;
     SimilarKeywordsInput similars;
+    QAReaderContext reader;
     string_t question;
     QAArray results;
     int index;
@@ -196,6 +198,9 @@ static int test_segment()
     keyword_index_init(&g_server_vars.ki_context, 1024 * 1024);
 
     result = word_segment_init(&g_server_vars.ws_context, 102400, &similars);
+    if (result != 0) {
+        return result;
+    }
     remain_count = row_count - 1;
     index = 0;
     while (remain_count > 0) {
@@ -207,7 +212,24 @@ static int test_segment()
             index++;
         }
         result = word_segment_add_keywords(&g_server_vars.ws_context, &keywords);
+        if (result != 0) {
+            return result;
+        }
     }
+
+    result = qa_reader_init(&reader, &g_server_vars.ws_context.string_allocator,
+            "../../conf/unix/file.ken");
+    if (result != 0) {
+        return result;
+    }
+
+    while (1) {
+        QAReaderEntry entry;
+        if (qa_reader_next(&reader, &entry) != 0) {
+            break;
+        }
+    }
+    return 0;  //TODO
 
     index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
     question = keywords.keywords[index];
