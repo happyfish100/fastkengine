@@ -68,6 +68,68 @@ static int qa_reader_next_tag(QAReaderContext *context, QATagInfo *tag)
     return 0;
 }
 
+static int get_next_expect_tag(QAReaderContext *context,
+        const char *tag_name, const int tag_len, QATagInfo *tag)
+{
+    char mark[64];
+    char *p;
+
+    p = context->p;
+    sprintf(mark, "[[%s", tag_name);
+    while (p < context->end) {
+        tag->start = strstr(p, mark);
+        if (tag->start == NULL) {
+            return ENOENT;
+        }
+
+        tag->name.str = tag->start + 2;
+        p = tag->name.str + tag_len;
+        if (*p == ' ' || *p == '\t' || *p == ']') {
+            break;
+        }
+    }
+    if (p == context->end) {
+        return ENOENT;
+    }
+
+    tag->end = strstr(tag->name.str, "]]");
+    if (tag->end == NULL) {
+        logError("file: "__FILE__", line: %d, "
+                "expect ]] in file: %s",
+                __LINE__, context->filename);
+        return EINVAL;
+    }
+
+    tag->name.len = tag_len;
+    tag->end += 2;
+    return 0;
+}
+
+static int get_first_end_tag(QAReaderContext *context,
+        const char *tag_name1, const int tag_len1,
+        const char *tag_name2, const int tag_len2,
+        QATagInfo *tag)
+{
+    QATagInfo tag1, tag2;
+    int r1, r2;
+
+    r1 = get_next_expect_tag(context, tag_name1, tag_len1, &tag1);
+    r2 = get_next_expect_tag(context, tag_name2, tag_len2, &tag2);
+    if (r1 == 0) {
+        if (r2 == 0) {
+            *tag = tag1.start < tag2.start ? tag1 : tag2;
+        } else {
+            *tag = tag1;
+        }
+        return 0;
+    } else if (r2 == 0) {
+        *tag = tag2;
+        return 0;
+    }
+
+    return r1;
+}
+
 static int qa_reader_parse_attribute_string(QAReaderContext *context,
         char **pp, char *end, const char stop, string_t *out)
 {
@@ -281,43 +343,151 @@ void qa_reader_destroy(QAReaderContext *context)
     }
 }
 
+static int qa_reader_parse_question(QAReaderContext *context,
+        const string_t *question, QAReaderEntry *entry)
+{
+    logInfo("question==== %.*s", FC_PRINTF_STAR_STRING_PARAMS(*question));
+    return 0;
+}
+
+
+static int qa_reader_add_an_answer(QAReaderContext *context,
+        QATagInfo *atag, const string_t *answer, QAReaderEntry *entry)
+{
+    int result;
+    QATagAttributeArray attributes;
+    key_value_pair_t *kv;
+    key_value_pair_t *end;
+
+    if ((result=qa_reader_parse_attributes(context, atag, &attributes)) != 0) {
+        return result;
+    }
+
+    logInfo("answer=====%.*s=======", FC_PRINTF_STAR_STRING_PARAMS(*answer));
+    logInfo("condition count: %d", attributes.count);
+    end = attributes.kv_pairs + attributes.count;
+    for (kv=attributes.kv_pairs; kv<end; kv++) {
+        logInfo("%.*s = %.*s", FC_PRINTF_STAR_STRING_PARAMS(kv->key),
+                FC_PRINTF_STAR_STRING_PARAMS(kv->value));
+    }
+
+    //TODO
+    return 0;
+}
+
+static int qa_reader_parse_answer(QAReaderContext *context,
+        QATagInfo *atag, QAReaderEntry *entry)
+{
+    QATagInfo next_tags[2];
+    QATagInfo *next_atag;
+    QATagInfo *current_tag;
+    string_t answer;
+    int result;
+    int i;
+
+    i = 0;
+    while (atag != NULL) {
+        current_tag = next_tags + (i++ % 2);
+        context->p = atag->end;   //skip answer tag
+        answer.str = atag->end;
+        if (get_first_end_tag(context,
+                    TAG_QUESTION_STR, TAG_QUESTION_LEN,
+                    TAG_ANSWER_STR, TAG_ANSWER_LEN,
+                    current_tag) == 0)
+        {
+            logWarning("file: "__FILE__", line: %d, "
+                    "=====first end tag in file: %s, tag: %.*s=====",
+                    __LINE__, context->filename,
+                    QA_SHOW_CONTENT_LENGTH((int)(current_tag->end - current_tag->start)),
+                    current_tag->start);
+
+            if (fc_string_equal2(&current_tag->name, TAG_QUESTION_STR,
+                        TAG_QUESTION_LEN))
+            {
+                context->p = current_tag->start;
+                next_atag = NULL;
+            } else {
+                next_atag = current_tag;
+            }
+            answer.len = current_tag->start - answer.str;
+        } else {
+            next_atag = NULL;
+            context->p = context->end;
+            answer.len = context->end - answer.str;
+        }
+
+        if ((result=qa_reader_add_an_answer(context, atag,
+                        &answer, entry)) != 0)
+        {
+            break;
+        }
+        atag = next_atag;
+    }
+
+    return result;
+}
+
 int qa_reader_next(QAReaderContext *context, QAReaderEntry *entry)
 {
     int result;
+    int qr;
+    int ar;
     int64_t question_id;
-    QATagInfo tag;
+    string_t question;
+    QATagInfo qtag;
+    QATagInfo atag;
 
     if (context->p == context->end) {
         return ENOENT;
     }
 
     while (context->p < context->end) {
-        if ((result=qa_reader_next_tag(context, &tag)) != 0) {
+        if ((result=qa_reader_next_tag(context, &qtag)) != 0) {
             return result;
         }
 
-        if (fc_string_equal2(&tag.name, TAG_QUESTION_STR, TAG_QUESTION_LEN)) {
+        if (fc_string_equal2(&qtag.name, TAG_QUESTION_STR, TAG_QUESTION_LEN)) {
             break;
         }
 
-        context->p = tag.end;   //skip tag
+        context->p = qtag.end;   //skip tag
         logWarning("file: "__FILE__", line: %d, "
                 "skip tag in file: %s, tag: %.*s",
                 __LINE__, context->filename, QA_SHOW_CONTENT_LENGTH(
-                    (int)(tag.end - tag.start)), tag.start);
+                    (int)(qtag.end - qtag.start)), qtag.start);
     }
 
-    context->p = tag.end;   //skip tag
-    if ((result=qa_reader_get_attribute_id(context, &tag, &question_id)) != 0) {
+    context->p = qtag.end;   //skip tag
+    if ((result=qa_reader_get_attribute_id(context, &qtag, &question_id)) != 0) {
         return result;
     }
+
+    question.str = qtag.end;
 
     question_id += context->base_id;
     logInfo("question_id===== %"PRId64, question_id);
 
-    logInfo("file: "__FILE__", line: %d, "
-            "tag in file: %s, tag: %.*s",
-            __LINE__, context->filename, QA_SHOW_CONTENT_LENGTH(
-                (int)(tag.end - tag.start)), tag.start);
-    return 0;
+
+    result = qa_reader_next_tag(context, &atag);
+    if (result != 0 || !fc_string_equal2(&atag.name,
+                TAG_ANSWER_STR, TAG_ANSWER_LEN))
+    {
+        logWarning("file: "__FILE__", line: %d, "
+                "expect %s tag in file: %s, tag: %.*s",
+                __LINE__, TAG_ANSWER_STR, context->filename,
+                QA_SHOW_CONTENT_LENGTH((int)(qtag.end - qtag.start)),
+                qtag.start);
+        return EINVAL;
+    }
+
+        logWarning("file: "__FILE__", line: %d, "
+                "%s tag in file: %s, tag: %.*s",
+                __LINE__, TAG_ANSWER_STR, context->filename,
+                QA_SHOW_CONTENT_LENGTH((int)(atag.end - atag.start)),
+                atag.start);
+
+    question.len = atag.start - question.str;
+    qr = qa_reader_parse_question(context, &question, entry);
+    ar = qa_reader_parse_answer(context, &atag, entry);
+    return qr == 0 ? ar : qr;
 }
