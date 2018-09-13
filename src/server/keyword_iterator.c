@@ -18,10 +18,25 @@ bool combo_keyword_is_overlapp(const CombineKeywordInfo *key1,
     }
 }
 
-void combo_keywords_append(CombineKeywordInfo *dest,
-        const CombineKeywordInfo *append)
+int keywords_append(KeywordArray *dest, const KeywordArray *append)
 {
     int i;
+    for (i=0; i<append->count; i++) {
+        if (dest->count >= MAX_KEYWORDS_COUNT) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "keywords exceeds %d",
+                    __LINE__, MAX_KEYWORDS_COUNT);
+            return ENOSPC;
+        }
+        dest->keywords[dest->count++] = append->keywords[i];
+    }
+
+    return 0;
+}
+
+int combo_keywords_append(CombineKeywordInfo *dest,
+        const CombineKeywordInfo *append)
+{
     if (append->offset.start < dest->offset.start) {
         dest->offset.start = append->offset.start;
     }
@@ -29,16 +44,7 @@ void combo_keywords_append(CombineKeywordInfo *dest,
         dest->offset.end = append->offset.end;
     }
 
-    for (i=0; i<append->karray.count; i++) {
-        if (dest->karray.count >= MAX_KEYWORDS_COUNT) {
-            logWarning("file: "__FILE__", line: %d, "
-                    "keywords exceeds %d",
-                    __LINE__, MAX_KEYWORDS_COUNT);
-            break;
-        }
-        dest->karray.keywords[dest->karray.count++] =
-            append->karray.keywords[i];
-    }
+    return keywords_append(&dest->karray, &append->karray);
 }
 
 static void keyword_iterator_combine(ComboKeywordGroup *output,

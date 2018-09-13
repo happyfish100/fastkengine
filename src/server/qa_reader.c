@@ -343,13 +343,374 @@ void qa_reader_destroy(QAReaderContext *context)
     }
 }
 
-static int qa_reader_parse_question(QAReaderContext *context,
-        const string_t *question, QAReaderEntry *entry)
+static int expand_combined_keywords(const string_t *input,
+        string_t *keywords, const int max_cnt, int *count)
 {
-    logInfo("question==== %.*s", FC_PRINTF_STAR_STRING_PARAMS(*question));
+    char *p;
+    char *end;
+    string_t *keyword;
+
+    keyword = keywords;
+    end = input->str + input->len;
+    p = input->str;
+    while (p < end) {
+
+        if (keyword - keywords >= max_cnt) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "too many keywords exceeds %d, "
+                    "combined keywords: %.*s",
+                    __LINE__, max_cnt,
+                    FC_PRINTF_STAR_STRING_PARAMS(*keywords));
+            break;
+        }
+
+        keyword->str = p;
+        p = memchr(p, '|', end - p);
+        if (p != NULL) {
+            keyword->len = p - keyword->str;
+            p++; //skip |
+        } else {
+            keyword->len = end - keyword->str;
+            p = end;
+        }
+
+        FC_STRING_TRIM(keyword);
+        if (keyword->len == 0) {
+            continue;
+        }
+
+        logInfo("combined keyword==== %.*s", FC_PRINTF_STAR_STRING_PARAMS(*keyword));
+        keyword++;
+    }
+
+    *count = keyword - keywords;
+    return *count > 0 ? 0 : ENOENT;
+}
+
+static int records_combine_keywords(KeywordRecords *records,
+        const string_t *keywords, const int count)
+{
+    KeywordRecords temp;
+    KeywordArray *p;
+    KeywordArray *end;
+    KeywordArray *dest;
+    int i;
+
+    temp = *records;
+
+    records->count = 0;
+    end = temp.rows + temp.count;
+    for (p=temp.rows; p<end; p++) {
+        if (p->count >= MAX_KEYWORDS_COUNT) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "keywords exceeds %d",
+                    __LINE__, MAX_KEYWORDS_COUNT);
+            return ENOSPC;
+        }
+
+        for (i=0; i<count; i++) {
+            if (records->count >= MAX_KEYWORDS_ROWS) {
+                logWarning("file: "__FILE__", line: %d, "
+                        "keyword rows exceeds %d",
+                        __LINE__, MAX_KEYWORDS_ROWS);
+                return ENOSPC;
+            }
+
+            dest = records->rows + records->count++;
+            *dest = *p;
+            dest->keywords[dest->count++] = keywords[i];
+        }
+    }
+
     return 0;
 }
 
+static int records_combine_records(KeywordRecords *records,
+        const KeywordRecords *another)
+{
+    KeywordRecords temp;
+    KeywordArray *p1;
+    KeywordArray *end1;
+    const KeywordArray *p2;
+    const KeywordArray *end2;
+    KeywordArray *dest;
+    int result;
+
+    temp = *records;
+    end1 = temp.rows + temp.count;
+    end2 = another->rows + another->count;
+    for (p1=temp.rows; p1<end1; p1++) {
+        if (p1->count >= MAX_KEYWORDS_COUNT) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "keywords exceeds %d",
+                    __LINE__, MAX_KEYWORDS_COUNT);
+            return ENOSPC;
+        }
+
+        for (p2=another->rows; p2<end2; p2++) {
+            if (records->count >= MAX_KEYWORDS_ROWS) {
+                logWarning("file: "__FILE__", line: %d, "
+                        "keyword rows exceeds %d",
+                        __LINE__, MAX_KEYWORDS_ROWS);
+                return ENOSPC;
+            }
+
+            dest = records->rows + records->count++;
+            *dest = *p1;
+            if ((result=keywords_append(dest, p2)) != 0) {
+                return result;
+            }
+        }
+    }
+
+    return 0;
+}
+
+static int expand_question_keywords(QAReaderContext *context,
+        const KeywordArray *karray, KeywordRecords *records)
+{
+    int result;
+    KeywordArray single;
+    KeywordArray multi;
+    const string_t *current;
+    const string_t *end;
+    string_t keys[MAX_KEYWORDS_ROWS];
+    int count;
+    int start;
+    int i;
+
+    if (karray->count == 0) {
+        records->count = 0;
+        return ENOENT;
+    }
+
+    single.count = multi.count = 0;
+    end = karray->keywords + karray->count;
+    for (current=karray->keywords; current<end; current++) {
+        if (memchr(current->str, '|', current->len) != NULL) {
+            multi.keywords[multi.count++] = *current;
+        } else {
+            single.keywords[single.count++] = *current;
+        }
+    }
+
+    if (single.count > 0) {
+        start = 0;
+        records->count = 1;
+        records->rows[0] = single;
+    } else {
+        start = 1;
+        result = expand_combined_keywords(multi.keywords + 0,
+                keys, MAX_KEYWORDS_ROWS, &count);
+        if (result != 0) {
+            return result;
+        }
+
+        for (i=0; i<count; i++) {
+            records->rows[i].count = 1;
+            records->rows[i].keywords[0] = keys[i];
+        }
+        records->count = count;
+    }
+
+    for (i=start; i<multi.count; i++) {
+        result = expand_combined_keywords(multi.keywords + i,
+                keys, MAX_KEYWORDS_ROWS, &count);
+        if (result != 0) {
+            continue;
+        }
+
+        if ((result=records_combine_keywords(records, keys, count)) != 0) {
+            return result;
+        }
+    }
+
+    return 0;
+}
+
+static int parse_question_keywords(QAReaderContext *context,
+        const string_t *keywords, KeywordRecords *records)
+{
+    char *p;
+    char *end;
+    string_t *current;
+    KeywordArray karray;
+
+    karray.count = 0;
+    current = karray.keywords;
+    end = keywords->str + keywords->len;
+    p = keywords->str;
+    while (p < end) {
+        while (p < end && (*p == ' ' || *p == '\t')) {
+            p++;
+        }
+        if (p == end) {
+            break;
+        }
+
+        if (karray.count == MAX_KEYWORDS_COUNT) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "too many keywords exceeds %d, question: %.*s",
+                    __LINE__, MAX_KEYWORDS_COUNT,
+                    FC_PRINTF_STAR_STRING_PARAMS(*keywords));
+            break;
+        }
+
+        if (*p == '(') {
+            current->str = ++p;
+            while (p < end && *p != ')') {
+                p++;
+            }
+            if (p == end) {
+                logWarning("file: "__FILE__", line: %d, "
+                        "expect ), question: %.*s", __LINE__,
+                        FC_PRINTF_STAR_STRING_PARAMS(*keywords));
+            }
+        } else {
+            current->str = p++;
+            while (p < end && !(*p == ' ' || *p == '\t')) {
+                p++;
+            }
+        }
+
+        current->len = p - current->str;
+        if (p < end) {
+            p++;  //skip end char
+        }
+
+        if (current->len == 0) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "empty keyword, question: %.*s", __LINE__,
+                    FC_PRINTF_STAR_STRING_PARAMS(*keywords));
+            continue;
+        }
+
+        current++;
+        karray.count++;
+    }
+
+    logInfo("keywords count: %d", karray.count);
+    for (current=karray.keywords; current<karray.keywords+karray.count; current++) {
+        printf("%.*s ", FC_PRINTF_STAR_STRING_PARAMS(*current));
+    }
+    printf("\n");
+
+    return expand_question_keywords(context, &karray, records);
+}
+
+
+static void print_keyword_records(KeywordRecords *records)
+{
+    KeywordArray *p;
+    KeywordArray *end;
+    int i;
+
+    printf("==========================\n");
+    printf("row count: %d\n", records->count);
+    end = records->rows + records->count;
+    for (p=records->rows; p<end; p++) {
+        for (i=0; i<p->count; i++) {
+            printf("%.*s ", FC_PRINTF_STAR_STRING_PARAMS(p->keywords[i]));
+        }
+        printf("\n");
+    }
+    printf("==========================\n");
+    printf("\n");
+}
+
+static int parse_a_question(QAReaderContext *context,
+        const string_t *line, KeywordRecords *records)
+{
+    typedef struct {
+        string_t s;
+        KeywordRecords records;
+    } KeywordStringRecords;
+
+    KeywordStringRecords required;
+    KeywordStringRecords optional;
+
+    if (line->str[line->len - 1] == ']') {
+        char *p;
+        p = line->str + line->len - 1;
+        while (p >= line->str && *p != '[') {
+            p--;
+        }
+        if (p >= line->str) {  //found
+            required.s.str = line->str;
+            required.s.len = p - line->str;
+
+            optional.s.str = p + 1;
+            optional.s.len = line->len - required.s.len - 2;
+        } else {
+            required.s = *line;
+            FC_SET_STRING_NULL(optional.s);
+        }
+    } else {
+        required.s = *line;
+        FC_SET_STRING_NULL(optional.s);
+    }
+
+    parse_question_keywords(context, &required.s, records);
+    if (!FC_IS_NULL_STRING(&optional.s)) {
+        parse_question_keywords(context, &optional.s, &optional.records);
+        records_combine_records(records, &optional.records);
+    }
+
+    //print_keyword_records(records);
+    return 0;
+}
+
+static int qa_reader_parse_question(QAReaderContext *context,
+        const string_t *lines, QAReaderEntry *entry)
+{
+    char *p;
+    char *end;
+    int result;
+    string_t line;
+    KeywordRecords records;
+    int copy_count;
+
+    entry->questions.count = 0;
+    end = lines->str + lines->len;
+    p = lines->str;
+    while (p < end) {
+        line.str = p;
+        p = memchr(p, '\n', end - p);
+        if (p != NULL) {
+            line.len = p - line.str;
+            p++; //skip \n
+        } else {
+            line.len = end - line.str;
+            p = end;
+        }
+
+        FC_STRING_TRIM(&line);
+        if (line.len == 0) {
+            continue;
+        }
+
+        logInfo("lines==== %.*s", FC_PRINTF_STAR_STRING_PARAMS(line));
+
+        result = parse_a_question(context, &line, &records);
+        if (entry->questions.count + records.count > MAX_KEYWORDS_ROWS) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "keyword rows exceeds %d",
+                    __LINE__, MAX_KEYWORDS_ROWS);
+            copy_count = MAX_KEYWORDS_ROWS - entry->questions.count;
+        } else {
+            copy_count = records.count;
+        }
+
+        if (copy_count > 0) {
+            memcpy(entry->questions.rows + entry->questions.count,
+                    records.rows, sizeof(KeywordArray) * copy_count);
+            entry->questions.count += copy_count;
+        }
+    }
+
+    print_keyword_records(&entry->questions);
+    return 0;
+}
 
 static int qa_reader_add_an_answer(QAReaderContext *context,
         QATagInfo *atag, const string_t *answer, QAReaderEntry *entry)
@@ -479,6 +840,8 @@ int qa_reader_next(QAReaderContext *context, QAReaderEntry *entry)
                 qtag.start);
         return EINVAL;
     }
+
+    entry->answer.id = question_id;
 
         logWarning("file: "__FILE__", line: %d, "
                 "%s tag in file: %s, tag: %.*s",

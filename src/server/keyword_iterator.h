@@ -36,7 +36,9 @@ extern "C" {
     bool combo_keyword_is_overlapp(const CombineKeywordInfo *key1,
             const CombineKeywordInfo *key2);
 
-    void combo_keywords_append(CombineKeywordInfo *dest,
+    int keywords_append(KeywordArray *dest, const KeywordArray *append);
+
+    int combo_keywords_append(CombineKeywordInfo *dest,
             const CombineKeywordInfo *append);
 
     void keyword_iterator_expand(KeywordIterator *iterator,

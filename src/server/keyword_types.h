@@ -10,7 +10,7 @@
 #include "fastcommon/common_define.h"
 
 #define MAX_KEYWORDS_COUNT    5
-#define MAX_KEYWORDS_ROWS  (MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
+#define MAX_KEYWORDS_ROWS    (4 * MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
 
 #define MAX_ANSWER_COUNT      5
 
