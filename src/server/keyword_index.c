@@ -109,22 +109,6 @@ static KeywordIndexHashEntry *hashtable_find(KeywordIndexContext *context,
     return NULL;
 }
 
-
-static int alloc_string(KeywordIndexContext *context, string_t *dest,
-        const string_t *src)
-{
-    dest->str = (char *)fast_mpool_alloc(&context->string_allocator, src->len);
-    if (dest->str == NULL) {
-        logError("file: "__FILE__", line: %d, "
-                "alloc %d bytes from mpool fail", __LINE__, src->len);
-        return ENOMEM;
-    }
-
-    memcpy(dest->str, src->str, src->len);
-    dest->len = src->len;
-    return 0;
-}
-
 static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
         const string_t *question, AnswerEntry *answer, const int keywords_count)
 {
@@ -141,7 +125,9 @@ static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
         return NULL;
     }
 
-    if ((result=alloc_string(context, &hentry->question.q, question)) != 0) {
+    if ((result=fast_mpool_strdup(&context->string_allocator,
+                    &hentry->question.q, question)) != 0)
+    {
         return NULL;
     }
     hentry->question.kcount = keywords_count;

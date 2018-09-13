@@ -14,6 +14,8 @@
 
 #define QA_TAG_MAX_ATTRIBUTES   5
 #define QA_SHOW_CONTENT_SIZE    256
+#define QA_MAX_ANSWER_ENTRIES   64
+
 
 #define TAG_BASE_STR      "base"
 #define TAG_QUESTION_STR  "question"
@@ -705,6 +707,9 @@ static int qa_reader_parse_question(QAReaderContext *context,
             memcpy(entry->questions.rows + entry->questions.count,
                     records.rows, sizeof(KeywordArray) * copy_count);
             entry->questions.count += copy_count;
+            if (entry->questions.count == MAX_KEYWORDS_ROWS) {
+                break;
+            }
         }
     }
 
@@ -712,27 +717,203 @@ static int qa_reader_parse_question(QAReaderContext *context,
     return 0;
 }
 
-static int qa_reader_add_an_answer(QAReaderContext *context,
-        QATagInfo *atag, const string_t *answer, QAReaderEntry *entry)
+static int compare_key_value_pair(const void *p1, const void *p2)
+{
+    key_value_pair_t *kv1, *kv2;
+    int result;
+
+    kv1 = (key_value_pair_t *)p1;
+    kv2 = (key_value_pair_t *)p2;
+    if ((result=fc_string_compare(&kv1->key, &kv2->key)) != 0) {
+        return result;
+    }
+
+    return fc_string_compare(&kv1->value, &kv2->value);
+}
+
+static int compare_by_answer_conditions(const void *p1, const void *p2)
+{
+    ConditionAnswerEntry *entry1;
+    ConditionAnswerEntry *entry2;
+    int sub;
+    int result;
+    int i;
+
+    entry1 = (ConditionAnswerEntry *)p1;
+    entry2 = (ConditionAnswerEntry *)p2;
+
+    sub = entry1->conditions.count - entry2->conditions.count;
+    if (sub != 0) {
+        return sub;
+    }
+
+    for (i=0; i<entry1->conditions.count; i++) {
+        if ((result=compare_key_value_pair(entry1->conditions.kv_pairs + i,
+                        entry2->conditions.kv_pairs + i)) != 0)
+        {
+            return result;
+        }
+    }
+
+    return 0;
+}
+
+static int add_unique_answers(QAReaderContext *context,
+        ConditionAnswerEntry *answer_entries, const int count,
+        ConditionAnswerArray *answer_array)
+{
+    ConditionAnswerEntry sorted_entries[QA_MAX_ANSWER_ENTRIES];
+    ConditionAnswerEntry *unique_entries[QA_MAX_ANSWER_ENTRIES];
+    ConditionAnswerEntry *p;
+    ConditionAnswerEntry *end;
+    ConditionAnswerEntry **dest;
+    key_value_pair_t *kv_pairs;
+    key_value_pair_t *kv;
+    key_value_pair_t *kv_end;
+    key_value_pair_t *kv_dest;
+    int result;
+    int unique_count;
+    int kv_count;
+    int bytes;
+    int i;
+
+    if (count <= 1) {
+        unique_count = count;
+        *unique_entries = answer_entries;
+    } else {
+        memcpy(sorted_entries, answer_entries,
+                sizeof(ConditionAnswerEntry) * count);
+        qsort(sorted_entries, count, sizeof(ConditionAnswerEntry),
+                compare_by_answer_conditions);
+       
+        end = sorted_entries + count;
+        dest = unique_entries;
+        *dest++ = sorted_entries;
+        for (p=sorted_entries + 1; p<end; p++) {
+            if (compare_by_answer_conditions(p, p-1) != 0) {
+                *dest++ = p;
+            }
+        }
+
+        unique_count = dest - unique_entries;
+    }
+
+    bytes = sizeof(ConditionAnswerEntry) * unique_count;
+    answer_array->entries = (ConditionAnswerEntry *)fast_mpool_alloc(
+            context->mpool, bytes);
+    if (answer_array->entries == NULL) {
+        logError("file: "__FILE__", line: %d, "
+                "alloc %d bytes from mpool fail", __LINE__, bytes);
+        return ENOMEM;
+    }
+
+    for (i=0; i<unique_count; i++) {
+        kv_count = unique_entries[i]->conditions.count;
+        answer_array->entries[i].conditions.count = kv_count;
+        if (kv_count == 0) {
+            kv_pairs = NULL;
+        } else {
+            bytes = sizeof(key_value_pair_t) * kv_count;
+            kv_pairs = (key_value_pair_t *)fast_mpool_alloc(
+                    context->mpool, bytes);
+            if (kv_pairs == NULL) {
+                logError("file: "__FILE__", line: %d, "
+                        "alloc %d bytes from mpool fail", __LINE__, bytes);
+                return ENOMEM;
+            }
+
+            kv_dest = kv_pairs;
+            kv_end = unique_entries[i]->conditions.kv_pairs + kv_count;
+            for (kv=unique_entries[i]->conditions.kv_pairs; kv<kv_end; kv++) {
+                if ((result=fast_mpool_strdup(context->mpool,
+                                &kv_dest->key, &kv->key)) != 0)
+                {
+                    return result;
+                }
+                if ((result=fast_mpool_strdup(context->mpool,
+                                &kv_dest->value, &kv->value)) != 0)
+                {
+                    return result;
+                }
+
+                kv_dest++;
+            }
+        }
+
+        answer_array->entries[i].conditions.kv_pairs = kv_pairs;
+    }
+
+    answer_array->count = unique_count;
+    return 0;
+}
+
+static int qa_reader_combine_answer(QAReaderContext *context,
+        ConditionAnswerEntry *answer_entries, const int count,
+        QAReaderEntry *entry)
+{
+    ConditionAnswerEntry *p;
+    ConditionAnswerEntry *end;
+    ConditionAnswerArray *answer_array;
+    int result;
+
+    end = answer_entries + count;
+    for (p=answer_entries; p<end; p++) {
+        if (p->conditions.count > 1) {
+            qsort(p->conditions.kv_pairs, p->conditions.count,
+                    sizeof(key_value_pair_t), compare_key_value_pair);
+        }
+    }
+
+    answer_array = &entry->answer.condition_answers;
+
+    if ((result=add_unique_answers(context, answer_entries,
+                    count, answer_array)) != 0)
+    {
+        return result;
+    }
+
+    //TODO set answer string
+
+    logInfo("======answer count====== %d", answer_array->count);
+
+    end = answer_array->entries + answer_array->count;
+    for (p=answer_array->entries; p<end; p++) {
+        key_value_pair_t *kv;
+        key_value_pair_t *kv_end;
+
+        printf("kv count: %d\n", p->conditions.count);
+
+        kv_end = p->conditions.kv_pairs + p->conditions.count;
+        for (kv=p->conditions.kv_pairs; kv<kv_end; kv++) {
+            printf("%.*s=%.*s ", FC_PRINTF_STAR_STRING_PARAMS(kv->key),
+                    FC_PRINTF_STAR_STRING_PARAMS(kv->value));
+        }
+        printf("\n");
+    }
+
+    return 0;
+}
+
+static int qa_reader_set_answer(QAReaderContext *context,
+        QATagInfo *atag, const string_t *answer,
+        ConditionAnswerEntry *entry, key_value_pair_t **kv_pairs)
 {
     int result;
     QATagAttributeArray attributes;
-    key_value_pair_t *kv;
-    key_value_pair_t *end;
 
     if ((result=qa_reader_parse_attributes(context, atag, &attributes)) != 0) {
         return result;
     }
 
-    logInfo("answer=====%.*s=======", FC_PRINTF_STAR_STRING_PARAMS(*answer));
-    logInfo("condition count: %d", attributes.count);
-    end = attributes.kv_pairs + attributes.count;
-    for (kv=attributes.kv_pairs; kv<end; kv++) {
-        logInfo("%.*s = %.*s", FC_PRINTF_STAR_STRING_PARAMS(kv->key),
-                FC_PRINTF_STAR_STRING_PARAMS(kv->value));
+    entry->answer = *answer;
+    entry->conditions.count = attributes.count;
+    entry->conditions.kv_pairs = *kv_pairs;
+    if (attributes.count > 0) {
+        memcpy(entry->conditions.kv_pairs, attributes.kv_pairs,
+                sizeof(key_value_pair_t) * attributes.count);
+        *kv_pairs += attributes.count;
     }
 
-    //TODO
     return 0;
 }
 
@@ -742,13 +923,17 @@ static int qa_reader_parse_answer(QAReaderContext *context,
     QATagInfo next_tags[2];
     QATagInfo *next_atag;
     QATagInfo *current_tag;
+    ConditionAnswerEntry answers[QA_MAX_ANSWER_ENTRIES];
+    key_value_pair_t kv_pairs[QA_TAG_MAX_ATTRIBUTES * QA_MAX_ANSWER_ENTRIES];
+    key_value_pair_t *current_kv;
     string_t answer;
     int result;
-    int i;
+    int count;
 
-    i = 0;
+    current_kv = kv_pairs;
+    count = 0;
     while (atag != NULL) {
-        current_tag = next_tags + (i++ % 2);
+        current_tag = next_tags + (count % 2);
         context->p = atag->end;   //skip answer tag
         answer.str = atag->end;
         if (get_first_end_tag(context,
@@ -777,15 +962,29 @@ static int qa_reader_parse_answer(QAReaderContext *context,
             answer.len = context->end - answer.str;
         }
 
-        if ((result=qa_reader_add_an_answer(context, atag,
-                        &answer, entry)) != 0)
+        if (count >= QA_MAX_ANSWER_ENTRIES) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "answer count exceeds %d",
+                    __LINE__, QA_MAX_ANSWER_ENTRIES);
+            result = ENOSPC;
+            break;
+        }
+
+        if ((result=qa_reader_set_answer(context, atag,
+                        &answer, answers + count, &current_kv)) != 0)
         {
             break;
         }
+
         atag = next_atag;
+        count++;
     }
 
-    return result;
+    if ((result=qa_reader_combine_answer(context, answers, count, entry)) != 0) {
+        return result;
+    }
+
+    return 0;
 }
 
 int qa_reader_next(QAReaderContext *context, QAReaderEntry *entry)

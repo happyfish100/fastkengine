@@ -51,22 +51,6 @@ static WordSegmentHashEntry *hashtable_find(WordSegmentContext *context,
     return NULL;
 }
 
-
-static int alloc_string(WordSegmentContext *context, string_t *dest,
-        const string_t *src)
-{
-    dest->str = (char *)fast_mpool_alloc(&context->string_allocator, src->len);
-    if (dest->str == NULL) {
-        logError("file: "__FILE__", line: %d, "
-                "alloc %d bytes from mpool fail", __LINE__, src->len);
-        return ENOMEM;
-    }
-
-    memcpy(dest->str, src->str, src->len);
-    dest->len = src->len;
-    return 0;
-}
-
 static WordSegmentHashEntry *hashtable_insert(WordSegmentContext *context,
         const string_t *keyword, const string_t *similar)
 {
@@ -83,14 +67,18 @@ static WordSegmentHashEntry *hashtable_insert(WordSegmentContext *context,
         return NULL;
     }
 
-    if ((result=alloc_string(context, &hentry->keyword, keyword)) != 0) {
+    if ((result=fast_mpool_strdup(&context->string_allocator,
+                    &hentry->keyword, keyword)) != 0)
+    {
         return NULL;
     }
 
     if (fc_string_equal(keyword, similar)) {
         hentry->similar = hentry->keyword;
     } else {
-        if ((result=alloc_string(context, &hentry->similar, similar)) != 0) {
+        if ((result=fast_mpool_strdup(&context->string_allocator,
+                        &hentry->similar, similar)) != 0)
+        {
             return NULL;
         }
     }
@@ -116,7 +104,9 @@ static int insert_hentry(WordSegmentContext *context,
         }
 
         if (fc_string_equal(&hentry->keyword, &hentry->similar)) {
-            if ((result=alloc_string(context, &hentry->similar, similar)) != 0) {
+            if ((result=fast_mpool_strdup(&context->string_allocator,
+                            &hentry->similar, similar)) != 0)
+            {
                 return result;
             }
             return 0;
