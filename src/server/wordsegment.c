@@ -538,17 +538,20 @@ static int word_segment_do_split(WordSegmentArray *output)
 #define MAX_KEYWORDS  (MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
     string_t word;
     string_t keyword;
+    char buff[256];
     CombineKeywordInfo keywords[MAX_KEYWORDS];
     CombineKeywordInfo *kinfo;
     KeywordHashEntry *hentry;
-    int count;
     const char *p;
     const char *end;
     const char *start;
     const char *save_point;
+    int len;
+    int count;
     int i;
     bool is_chinese;
 
+    keyword.str = buff;
     kinfo = keywords;
     p = output->holder.str;
     end = output->holder.str + output->holder.len;
@@ -558,27 +561,23 @@ static int word_segment_do_split(WordSegmentArray *output)
         if (word_segment_next_word(&p, end, &word, &is_chinese) != 0) {
             continue;
         }
-        if (!is_chinese) {
-            if ((hentry=keyword_hashtable_find(&g_server_vars.kh_context,
-                            &word)) != NULL)
-            {
-                SET_KEYWORD_INFO(kinfo, hentry);
-            }
-            continue;
-        }
 
-        keyword.str = (char *)(p - word.len);
-        keyword.len = 0;
+        if (word.len <= sizeof(buff)) {
+            keyword.len = word.len;
+        } else {
+            keyword.len = sizeof(buff);
+        }
+        memcpy(keyword.str, p - word.len, keyword.len);
         save_point = p;
 
-        //TODO check keyword_hashtable_find
         while (true) {
-            keyword.len += word.len;
-            logInfo("finding: %.*s(%d)", keyword.len, keyword.str, keyword.len);
+            logInfo("finding: %.*s(%d)", FC_PRINTF_STAR_STRING_PARAMS(keyword), keyword.len);
             if ((hentry=keyword_hashtable_find(&g_server_vars.kh_context,
                             &keyword)) != NULL)
             {
                 SET_KEYWORD_INFO(kinfo, hentry);
+            } else {
+                break;
             }
 
             while (p < end && *p == ' ') {
@@ -587,9 +586,14 @@ static int word_segment_do_split(WordSegmentArray *output)
             if (word_segment_next_word(&p, end, &word, &is_chinese) != 0) {
                 break;
             }
-            if (!is_chinese) {
-                break;
+
+            if (keyword.len + word.len <= sizeof(buff)) {
+                len = word.len;
+            } else {
+                len = sizeof(buff) - keyword.len;
             }
+            memcpy(keyword.str+keyword.len, p - word.len, len);
+            keyword.len += len;
         }
 
         p = save_point;  //rewind
