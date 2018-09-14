@@ -125,7 +125,7 @@ static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
         return NULL;
     }
 
-    if ((result=fast_mpool_strdup(&context->string_allocator,
+    if ((result=fast_mpool_strdup2(&context->string_allocator,
                     &hentry->question.q, question)) != 0)
     {
         return NULL;

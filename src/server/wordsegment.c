@@ -67,7 +67,7 @@ static WordSegmentHashEntry *hashtable_insert(WordSegmentContext *context,
         return NULL;
     }
 
-    if ((result=fast_mpool_strdup(&context->string_allocator,
+    if ((result=fast_mpool_strdup2(&context->string_allocator,
                     &hentry->keyword, keyword)) != 0)
     {
         return NULL;
@@ -76,7 +76,7 @@ static WordSegmentHashEntry *hashtable_insert(WordSegmentContext *context,
     if (fc_string_equal(keyword, similar)) {
         hentry->similar = hentry->keyword;
     } else {
-        if ((result=fast_mpool_strdup(&context->string_allocator,
+        if ((result=fast_mpool_strdup2(&context->string_allocator,
                         &hentry->similar, similar)) != 0)
         {
             return NULL;
@@ -104,7 +104,7 @@ static int insert_hentry(WordSegmentContext *context,
         }
 
         if (fc_string_equal(&hentry->keyword, &hentry->similar)) {
-            if ((result=fast_mpool_strdup(&context->string_allocator,
+            if ((result=fast_mpool_strdup2(&context->string_allocator,
                             &hentry->similar, similar)) != 0)
             {
                 return result;
@@ -403,11 +403,6 @@ static int compare_offset(const void *p1, const void *p2)
         ((CombineKeywordInfo *)p2)->offset.start;
 }
 
-static int compare_string(const void *p1, const void *p2)
-{
-    return fc_string_compare((const string_t *)p1, (const string_t *)p2);
-}
-
 static int compare_combo_keywords(const void *p1, const void *p2)
 {
     int i;
@@ -571,7 +566,7 @@ void keywords_unique(KeywordArray *karray)
     end = karray->keywords + karray->count;
     p = dest = karray->keywords + 1;
     while (p < end) {
-        if (compare_string(p, p - 1) != 0) {
+        if (fc_string_compare(p, p - 1) != 0) {
             if (dest != p) {
                 *dest = *p;
             }
@@ -583,7 +578,7 @@ void keywords_unique(KeywordArray *karray)
     karray->count = dest - karray->keywords;
 }
 
-static void keyword_records_unique(KeywordRecords *results)
+static void sorted_keyword_records_unique(KeywordRecords *results)
 {
     KeywordArray *p;
     KeywordArray *end;
@@ -591,6 +586,21 @@ static void keyword_records_unique(KeywordRecords *results)
     end = results->rows + results->count;
     for (p=results->rows; p<end; p++) {
         if (p->count > 1) {
+            keywords_unique(p);
+        }
+    }
+}
+
+void keyword_records_unique(KeywordRecords *results)
+{
+    KeywordArray *p;
+    KeywordArray *end;
+
+    end = results->rows + results->count;
+    for (p=results->rows; p<end; p++) {
+        if (p->count > 1) {
+            qsort(p->keywords, p->count, sizeof(string_t),
+                    (int (*)(const void *p1, const void *p2))fc_string_compare);
             keywords_unique(p);
         }
     }
@@ -607,7 +617,8 @@ static void output_results_unique(ComboKeywordGroup *combo_results,
     for (p=combo_results->rows; p<end; p++) {
         qsort(p->karray.keywords,
                 p->karray.count,
-                sizeof(string_t), compare_string);
+                sizeof(string_t),
+                (int (*)(const void *p1, const void *p2))fc_string_compare);
     }
 
     qsort(combo_results->rows, combo_results->count,
@@ -623,7 +634,7 @@ static void output_results_unique(ComboKeywordGroup *combo_results,
         p++;
     }
     results->count = dest - results->rows;
-    keyword_records_unique(results);
+    sorted_keyword_records_unique(results);
 }
 
 static int word_segment_output(WordSegmentContext *context,

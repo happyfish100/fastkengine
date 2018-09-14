@@ -60,6 +60,8 @@ extern "C" {
 
     void keywords_unique(KeywordArray *karray);
 
+    void keyword_records_unique(KeywordRecords *results);
+
     int word_segment_split(WordSegmentContext *context, const string_t *input,
             WordSegmentArray *output);
 

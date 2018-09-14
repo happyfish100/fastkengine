@@ -32,6 +32,7 @@ typedef struct {
     string_t name;
     char *start;
     char *end;
+    char *next;
 } QATagInfo;
 
 typedef struct {
@@ -41,6 +42,22 @@ typedef struct {
 
 #define QA_SHOW_CONTENT_LENGTH(len) \
     (len > QA_SHOW_CONTENT_SIZE ? QA_SHOW_CONTENT_SIZE : len)
+
+static void qa_reader_set_tag_next(QAReaderContext *context, QATagInfo *tag)
+{
+    char *p;
+
+    p = tag->end;
+    while (p < context->end && (*p == ' ' || *p == '\t' || *p == '\r')) {
+        p++;
+    }
+    if (p < context->end && *p == '\n') {
+        p++;  //skip newline
+        tag->next = p;
+    } else {
+        tag->next = tag->end;
+    }
+}
 
 static int qa_reader_next_tag(QAReaderContext *context, QATagInfo *tag)
 {
@@ -66,7 +83,8 @@ static int qa_reader_next_tag(QAReaderContext *context, QATagInfo *tag)
     }
 
     tag->name.len = p - tag->name.str;
-    tag->end += 2;
+    tag->end += 2;   //skip ]]
+    qa_reader_set_tag_next(context, tag);
     return 0;
 }
 
@@ -104,6 +122,7 @@ static int get_next_expect_tag(QAReaderContext *context,
 
     tag->name.len = tag_len;
     tag->end += 2;
+    qa_reader_set_tag_next(context, tag);
     return 0;
 }
 
@@ -329,6 +348,11 @@ int qa_reader_init(QAReaderContext *context, struct fast_mpool_man *mpool,
     {
         return result;
     }
+
+    if ((result=fast_buffer_init_ex(&context->buffer, 4096)) != 0) {
+        return result;
+    }
+
     context->file_content.len = file_size;
     context->mpool = mpool;
     context->p = context->file_content.str;
@@ -342,6 +366,8 @@ void qa_reader_destroy(QAReaderContext *context)
     if (context->file_content.str != NULL) {
         free(context->file_content.str);
         context->file_content.str = NULL;
+
+        fast_buffer_destroy(&context->buffer);
     }
 }
 
@@ -825,12 +851,12 @@ static int add_unique_answers(QAReaderContext *context,
             kv_dest = kv_pairs;
             kv_end = unique_entries[i]->conditions.kv_pairs + kv_count;
             for (kv=unique_entries[i]->conditions.kv_pairs; kv<kv_end; kv++) {
-                if ((result=fast_mpool_strdup(context->mpool,
+                if ((result=fast_mpool_strdup2(context->mpool,
                                 &kv_dest->key, &kv->key)) != 0)
                 {
                     return result;
                 }
-                if ((result=fast_mpool_strdup(context->mpool,
+                if ((result=fast_mpool_strdup2(context->mpool,
                                 &kv_dest->value, &kv->value)) != 0)
                 {
                     return result;
@@ -844,6 +870,43 @@ static int add_unique_answers(QAReaderContext *context,
     }
 
     answer_array->count = unique_count;
+    return 0;
+}
+
+static int combine_answer_string(QAReaderContext *context,
+        ConditionAnswerEntry *answer_entries, const int count,
+        ConditionAnswerArray *answer_array)
+{
+    ConditionAnswerEntry *entry;
+    ConditionAnswerEntry *end;
+    ConditionAnswerEntry *fp;
+    ConditionAnswerEntry *fend;
+    int result;
+
+    fend = answer_entries + count;
+    end = answer_array->entries + answer_array->count;
+    for (entry=answer_array->entries; entry<end; entry++) {
+
+        fast_buffer_clear(&context->buffer);
+        for (fp=answer_entries; fp<fend; fp++) {
+            if (fp->conditions.count == 0 || compare_by_answer_conditions(
+                        fp, entry) == 0)
+            {
+                if ((result=fast_buffer_append_string2(&context->buffer,
+                                &fp->answer)) != 0)
+                {
+                    return result;
+                }
+            }
+        }
+
+        if ((result=fast_mpool_strdup_ex(context->mpool, &entry->answer,
+                context->buffer.data, context->buffer.length)) != 0)
+        {
+            return result;
+        }
+    }
+
     return 0;
 }
 
@@ -872,7 +935,11 @@ static int qa_reader_combine_answer(QAReaderContext *context,
         return result;
     }
 
-    //TODO set answer string
+    if ((result=combine_answer_string(context, answer_entries,
+                    count, answer_array)) != 0)
+    {
+        return result;
+    }
 
     logInfo("======answer count====== %d", answer_array->count);
 
@@ -888,7 +955,11 @@ static int qa_reader_combine_answer(QAReaderContext *context,
             printf("%.*s=%.*s ", FC_PRINTF_STAR_STRING_PARAMS(kv->key),
                     FC_PRINTF_STAR_STRING_PARAMS(kv->value));
         }
-        printf("\n");
+        printf("\n answer::::::\n");
+        printf("$$$$$$$$$$$$$$$$\n");
+        printf("%.*s",
+                FC_PRINTF_STAR_STRING_PARAMS(p->answer));
+        printf("$$$$$$$$$$$$$$$$\n");
     }
 
     return 0;
@@ -934,8 +1005,8 @@ static int qa_reader_parse_answer(QAReaderContext *context,
     count = 0;
     while (atag != NULL) {
         current_tag = next_tags + (count % 2);
-        context->p = atag->end;   //skip answer tag
-        answer.str = atag->end;
+        context->p = atag->next;   //skip answer tag
+        answer.str = atag->next;
         if (get_first_end_tag(context,
                     TAG_QUESTION_STR, TAG_QUESTION_LEN,
                     TAG_ANSWER_STR, TAG_ANSWER_LEN,
@@ -1022,7 +1093,7 @@ int qa_reader_next(QAReaderContext *context, QAReaderEntry *entry)
         return result;
     }
 
-    question.str = qtag.end;
+    question.str = qtag.next;
 
     question_id += context->base_id;
     logInfo("question_id===== %"PRId64, question_id);

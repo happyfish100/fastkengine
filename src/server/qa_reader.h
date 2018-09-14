@@ -5,6 +5,7 @@
 
 #include "fastcommon/common_define.h"
 #include "fastcommon/fast_mpool.h"
+#include "fastcommon/fast_buffer.h"
 #include "keyword_types.h"
 
 typedef struct qa_reader_entry {
@@ -16,6 +17,7 @@ typedef struct qa_reader_context {
     const char *filename;
     string_t file_content;
     struct fast_mpool_man *mpool;
+    FastBuffer buffer;
     char *p;
     char *end;
     int64_t base_id;

@@ -229,7 +229,7 @@ static int test_segment()
             break;
         }
     }
-    return 0;  //TODO
+    return 0;
 
     index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
     question = keywords.keywords[index];
