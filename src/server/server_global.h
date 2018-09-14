@@ -6,11 +6,12 @@
 #include "fastcommon/common_define.h"
 #include "fastcommon/ini_file_reader.h"
 #include "fastcommon/ioevent.h"
+#include "keyword_hashtable.h"
 #include "wordsegment.h"
 #include "keyword_index.h"
 
 typedef struct kengine_global_variables {
-    WordSegmentContext ws_context;
+    KeywordHashtableContext kh_context;
     KeywordIndexContext ki_context;
 } KEngineGlobalVariables;
 

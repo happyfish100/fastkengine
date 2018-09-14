@@ -44,7 +44,7 @@ int qa_loader_init(const char **filenames, const int count)
 
     end = filenames + count;
     for (pp=filenames; pp<end; pp++) {
-        result = qa_reader_init(&reader, &g_server_vars.ws_context.
+        result = qa_reader_init(&reader, &g_server_vars.kh_context.
                 string_allocator, &buffer, *pp);
         if (result != 0) {
             break;

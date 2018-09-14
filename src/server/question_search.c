@@ -239,9 +239,7 @@ int question_search(const string_t *question, QAArray *results)
 
     results->count = 0;
     results->match_count = 0;
-    if ((result=word_segment_split(&g_server_vars.ws_context,
-                    question, &output)) != 0)
-    {
+    if ((result=word_segment_split(question, &output)) != 0) {
         return result;
     }
 

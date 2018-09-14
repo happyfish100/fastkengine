@@ -198,7 +198,7 @@ static int test_segment()
     init_combination_index_arrays();
     keyword_index_init(&g_server_vars.ki_context, 1024 * 1024);
 
-    result = word_segment_init(&g_server_vars.ws_context, 102400, &similars);
+    result = keyword_hashtable_init(&g_server_vars.kh_context, 102400, &similars);
     if (result != 0) {
         return result;
     }
@@ -212,7 +212,7 @@ static int test_segment()
             FC_SET_STRING(keywords.keywords[i], rows[index]);
             index++;
         }
-        result = word_segment_add_keywords(&g_server_vars.ws_context, &keywords);
+        result = keyword_hashtable_add_keywords(&g_server_vars.kh_context, &keywords);
         if (result != 0) {
             return result;
         }
@@ -222,7 +222,7 @@ static int test_segment()
         return result;
     }
 
-    result = qa_reader_init(&reader, &g_server_vars.ws_context.string_allocator,
+    result = qa_reader_init(&reader, &g_server_vars.kh_context.string_allocator,
             &buffer, "../../conf/unix/file.ken");
     if (result != 0) {
         return result;

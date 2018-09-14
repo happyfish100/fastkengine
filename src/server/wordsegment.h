@@ -13,30 +13,6 @@
 #include "keyword_types.h"
 #include "keyword_iterator.h"
 
-typedef struct similar_keyword_input  {
-    char **lines;
-    int count;
-    char seperator;
-} SimilarKeywordsInput;
-
-typedef struct word_segment_hash_entry {
-    string_t keyword;
-    string_t similar;
-    struct word_segment_hash_entry *next;
-} WordSegmentHashEntry;
-
-typedef struct word_segment_hash_table {
-    struct word_segment_hash_entry **buckets;
-    int capacity;
-} WordSegmentHashTable;
-
-typedef struct word_segment_context {
-    WordSegmentHashTable htable;
-    int max_chinese_chars;
-    struct fast_mblock_man hentry_allocator;
-    struct fast_mpool_man  string_allocator;
-} WordSegmentContext;
-
 typedef struct word_segment_array {
     KeywordRecords results;
 
@@ -48,13 +24,8 @@ typedef struct word_segment_array {
 extern "C" {
 #endif
 
-    int word_segment_init(WordSegmentContext *context, const int capacity,
-            const SimilarKeywordsInput *similars);
-
-    int word_segment_add_keywords(WordSegmentContext *context,
-            const KeywordArray *keywords);
-
-    void word_segment_destroy(WordSegmentContext *context);
+    int word_segment_next_word(const char **pp, const char *end,
+            string_t *ch, bool *is_chinese);
 
     void word_segment_normalize(const string_t *input, string_t *output);
 
@@ -62,8 +33,7 @@ extern "C" {
 
     void keyword_records_unique(KeywordRecords *results);
 
-    int word_segment_split(WordSegmentContext *context, const string_t *input,
-            WordSegmentArray *output);
+    int word_segment_split(const string_t *input, WordSegmentArray *output);
 
     void word_segment_free_result(WordSegmentArray *array);
 
