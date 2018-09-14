@@ -175,6 +175,7 @@ static int test_segment()
     char **rows;
     KeywordArray keywords;
     SimilarKeywordsInput similars;
+    FastBuffer buffer;
     QAReaderContext reader;
     string_t question;
     QAArray results;
@@ -217,8 +218,12 @@ static int test_segment()
         }
     }
 
+    if ((result=fast_buffer_init_ex(&buffer, 4096)) != 0) {
+        return result;
+    }
+
     result = qa_reader_init(&reader, &g_server_vars.ws_context.string_allocator,
-            "../../conf/unix/file.ken");
+            &buffer, "../../conf/unix/file.ken");
     if (result != 0) {
         return result;
     }
@@ -229,6 +234,7 @@ static int test_segment()
             break;
         }
     }
+    fast_buffer_destroy(&buffer);
     return 0;
 
     index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);

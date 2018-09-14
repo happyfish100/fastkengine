@@ -17,7 +17,7 @@ typedef struct qa_reader_context {
     const char *filename;
     string_t file_content;
     struct fast_mpool_man *mpool;
-    FastBuffer buffer;
+    FastBuffer *buffer;
     char *p;
     char *end;
     int64_t base_id;
@@ -27,7 +27,7 @@ typedef struct qa_reader_context {
 extern "C" {
 #endif
     int qa_reader_init(QAReaderContext *context, struct fast_mpool_man *mpool,
-            const char *filename);
+            FastBuffer *buffer, const char *filename);
 
     void qa_reader_destroy(QAReaderContext *context);
 

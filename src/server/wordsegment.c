@@ -773,7 +773,7 @@ static int word_segment_output(WordSegmentContext *context,
         logInfo("FOUND kEYWORD: %.*s", (int)(p - start), start);     \
         kinfo->offset.start = start - output->holder.str; \
         kinfo->offset.end = p - output->holder.str;       \
-        kinfo->karray.keywords[0] = hentry->similar;             \
+        kinfo->karray.keywords[0] = hentry->similar;      \
         kinfo->karray.count = 1;  \
         kinfo++; \
     } while (0)

@@ -337,7 +337,7 @@ static int qa_reader_get_base_id(QAReaderContext *context)
 }
 
 int qa_reader_init(QAReaderContext *context, struct fast_mpool_man *mpool,
-        const char *filename)
+        FastBuffer *buffer, const char *filename)
 {
     int result;
     int64_t file_size;
@@ -349,12 +349,9 @@ int qa_reader_init(QAReaderContext *context, struct fast_mpool_man *mpool,
         return result;
     }
 
-    if ((result=fast_buffer_init_ex(&context->buffer, 4096)) != 0) {
-        return result;
-    }
-
     context->file_content.len = file_size;
     context->mpool = mpool;
+    context->buffer = buffer;
     context->p = context->file_content.str;
     context->end = context->file_content.str + context->file_content.len;
 
@@ -366,8 +363,6 @@ void qa_reader_destroy(QAReaderContext *context)
     if (context->file_content.str != NULL) {
         free(context->file_content.str);
         context->file_content.str = NULL;
-
-        fast_buffer_destroy(&context->buffer);
     }
 }
 
@@ -424,7 +419,8 @@ static int records_combine_keywords(KeywordRecords *records,
     KeywordArray *dest;
     int i;
 
-    temp = *records;
+    temp.count = records->count;
+    memcpy(temp.rows, records->rows, sizeof(KeywordArray) * records->count);
 
     records->count = 0;
     end = temp.rows + temp.count;
@@ -464,7 +460,9 @@ static int records_combine_records(KeywordRecords *records,
     KeywordArray *dest;
     int result;
 
-    temp = *records;
+    temp.count = records->count;
+    memcpy(temp.rows, records->rows, sizeof(KeywordArray) * records->count);
+
     end1 = temp.rows + temp.count;
     end2 = another->rows + another->count;
     for (p1=temp.rows; p1<end1; p1++) {
@@ -887,12 +885,12 @@ static int combine_answer_string(QAReaderContext *context,
     end = answer_array->entries + answer_array->count;
     for (entry=answer_array->entries; entry<end; entry++) {
 
-        fast_buffer_clear(&context->buffer);
+        fast_buffer_clear(context->buffer);
         for (fp=answer_entries; fp<fend; fp++) {
             if (fp->conditions.count == 0 || compare_by_answer_conditions(
                         fp, entry) == 0)
             {
-                if ((result=fast_buffer_append_string2(&context->buffer,
+                if ((result=fast_buffer_append_string2(context->buffer,
                                 &fp->answer)) != 0)
                 {
                     return result;
@@ -901,7 +899,7 @@ static int combine_answer_string(QAReaderContext *context,
         }
 
         if ((result=fast_mpool_strdup_ex(context->mpool, &entry->answer,
-                context->buffer.data, context->buffer.length)) != 0)
+                context->buffer->data, context->buffer->length)) != 0)
         {
             return result;
         }
