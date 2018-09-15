@@ -8,8 +8,7 @@
 #include "server_global.h"
 #include "wordsegment.h"
 
-int word_segment_next_word(const char **pp, const char *end, string_t *ch,
-        bool *is_chinese)
+int word_segment_next_word(const char **pp, const char *end, string_t *ch)
 {
     ch->str = (char *)*pp;
     if (*pp >= end) {
@@ -23,7 +22,6 @@ int word_segment_next_word(const char **pp, const char *end, string_t *ch,
     }
     ch->len = (char *)*pp - ch->str;
     if (ch->len > 0) {
-        *is_chinese = false;
         return 0;
     }
 
@@ -49,7 +47,6 @@ int word_segment_next_word(const char **pp, const char *end, string_t *ch,
 
         ch->len = 3;
         *pp += 3;
-        *is_chinese = true;
         return 0;
     } else {
         logWarning("file: "__FILE__", line: %d, "
@@ -536,9 +533,10 @@ static int word_segment_output(CombineKeywordInfo *keywords, const int count,
 static int word_segment_do_split(WordSegmentArray *output)
 {
 #define MAX_KEYWORDS  (MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
+#define MAX_KEYWORD_CHARS   16   //Note: an english word as a char
+
     string_t word;
-    string_t keyword;
-    char buff[256];
+    string_t chrs[MAX_KEYWORD_CHARS];
     CombineKeywordInfo keywords[MAX_KEYWORDS];
     CombineKeywordInfo *kinfo;
     KeywordHashEntry *hentry;
@@ -546,34 +544,27 @@ static int word_segment_do_split(WordSegmentArray *output)
     const char *end;
     const char *start;
     const char *save_point;
-    int len;
-    int count;
-    int i;
-    bool is_chinese;
+    int chr_count;
+    int key_count;
 
-    keyword.str = buff;
     kinfo = keywords;
     p = output->holder.str;
     end = output->holder.str + output->holder.len;
-    i = 0;
     while (p < end) {
         start = p;
-        if (word_segment_next_word(&p, end, &word, &is_chinese) != 0) {
+        if (word_segment_next_word(&p, end, &word) != 0) {
             continue;
         }
 
-        if (word.len <= sizeof(buff)) {
-            keyword.len = word.len;
-        } else {
-            keyword.len = sizeof(buff);
-        }
-        memcpy(keyword.str, p - word.len, keyword.len);
+        chrs[0] = word;
+        chr_count = 1;
         save_point = p;
 
         while (true) {
-            logInfo("finding: %.*s(%d)", FC_PRINTF_STAR_STRING_PARAMS(keyword), keyword.len);
-            if ((hentry=keyword_hashtable_find(&g_server_vars.kh_context,
-                            &keyword)) != NULL)
+            logInfo("finding: %.*s(%d), chr_count: %d",
+                    (int)(p - start), start, (int)(p - start), chr_count);
+            if ((hentry=keyword_hashtable_find_ex(&g_server_vars.kh_context,
+                            chrs, chr_count)) != NULL)
             {
                 SET_KEYWORD_INFO(kinfo, hentry);
             } else {
@@ -583,25 +574,25 @@ static int word_segment_do_split(WordSegmentArray *output)
             while (p < end && *p == ' ') {
                 p++;
             }
-            if (word_segment_next_word(&p, end, &word, &is_chinese) != 0) {
+            if (word_segment_next_word(&p, end, &word) != 0) {
                 break;
             }
 
-            if (keyword.len + word.len <= sizeof(buff)) {
-                len = word.len;
-            } else {
-                len = sizeof(buff) - keyword.len;
+            if (chr_count == MAX_KEYWORD_CHARS) {
+                logWarning("file: "__FILE__", line: %d, "
+                        "too many keyword chars exceed %d, keywords: %.*s",
+                        __LINE__, MAX_KEYWORD_CHARS, (int)(p - start), start);
+                break;
             }
-            memcpy(keyword.str+keyword.len, p - word.len, len);
-            keyword.len += len;
+            chrs[chr_count++] = word;
         }
 
         p = save_point;  //rewind
     }
 
-    count = kinfo - keywords;
-    logInfo("found keyword count: %d", count);
-    return word_segment_output(keywords, count, output);
+    key_count = kinfo - keywords;
+    logInfo("found keyword key_count: %d", key_count);
+    return word_segment_output(keywords, key_count, output);
 }
 
 int word_segment_split(const string_t *input, WordSegmentArray *output)

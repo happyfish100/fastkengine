@@ -25,7 +25,7 @@ extern "C" {
 #endif
 
     int word_segment_next_word(const char **pp, const char *end,
-            string_t *ch, bool *is_chinese);
+            string_t *ch);
 
     void word_segment_normalize(const string_t *input, string_t *output);
 

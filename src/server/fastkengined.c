@@ -218,6 +218,7 @@ static int test_segment()
         }
     }
 
+    if (0) {
     if ((result=fast_buffer_init_ex(&buffer, 4096)) != 0) {
         return result;
     }
@@ -235,11 +236,13 @@ static int test_segment()
         }
     }
     fast_buffer_destroy(&buffer);
+    }
 
     index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
     question = keywords.keywords[index];
 
     //question.str = "查 找 文 件 列  表";
+    //question.str = "文件b超查找";
     question.str = "中华 人民 共和国 中华 万岁";
     question.len = strlen(question.str);
 

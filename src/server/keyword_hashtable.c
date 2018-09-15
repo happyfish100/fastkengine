@@ -155,7 +155,6 @@ static int insert_keyword(KeywordHashtableContext *context,
     const char *end;
     string_t empty;
     int i;
-    bool is_chinese;
     KeywordHashtable **htable;
     KeywordHashEntry *hentry;
 
@@ -166,12 +165,12 @@ static int insert_keyword(KeywordHashtableContext *context,
     FC_SET_STRING_NULL(empty);
     i = 0;
     while (p < end) {
-        if (word_segment_next_word(&p, end, &ch, &is_chinese) != 0) {
+        if (word_segment_next_word(&p, end, &ch) != 0) {
             continue;
         }
 
-        logInfo("word[%d]: %.*s, last: %d, is_chinese: %d",
-                i, ch.len, ch.str, p == end, is_chinese);
+        logInfo("word[%d]: %.*s, last: %d",
+                i, ch.len, ch.str, p == end);
 
         if ((hentry=insert_char(context, htable, ++i,
                         &ch, p == end ? similar : &empty, keyword)) == 0)
@@ -193,7 +192,6 @@ KeywordHashEntry *keyword_hashtable_find(KeywordHashtableContext *context,
     const char *end;
     KeywordHashtable **htable;
     KeywordHashEntry *hentry;
-    bool is_chinese;
 
     htable = &context->top;
     p = keyword->str;
@@ -201,12 +199,12 @@ KeywordHashEntry *keyword_hashtable_find(KeywordHashtableContext *context,
 
     int i = 0;
     while (p < end) {
-        if (word_segment_next_word(&p, end, &ch, &is_chinese) != 0) {
+        if (word_segment_next_word(&p, end, &ch) != 0) {
             continue;
         }
 
-        logInfo("finding WORD[%d]: %.*s, last: %d, is_chinese: %d",
-                i++, ch.len, ch.str, p == end, is_chinese);
+        logInfo("finding WORD[%d]: %.*s, last: %d",
+                i++, ch.len, ch.str, p == end);
 
         hentry = hashtable_find(*htable, &ch);
         if (hentry == NULL) {
@@ -214,6 +212,43 @@ KeywordHashEntry *keyword_hashtable_find(KeywordHashtableContext *context,
         }
 
         if (p == end) {
+            return hentry;
+        }
+
+        htable = &hentry->children;
+        if (*htable == NULL) {
+            return NULL;
+        }
+    }
+
+    return NULL;
+}
+
+KeywordHashEntry *keyword_hashtable_find_ex(KeywordHashtableContext *context,
+        const string_t *chs, const int count)
+{
+    const string_t *p;
+    const string_t *end;
+    KeywordHashtable **htable;
+    KeywordHashEntry *hentry;
+
+    htable = &context->top;
+    p = chs;
+    end = chs + count;
+
+    int i = 0;
+    while (p < end) {
+
+        logInfo("finding WORD[%d]: %.*s(%d), last: %d",
+                i++, FC_PRINTF_STAR_STRING_PARAMS(*p),
+                p->len, p == end);
+
+        hentry = hashtable_find(*htable, p);
+        if (hentry == NULL) {
+            return NULL;
+        }
+
+        if (++p == end) {
             return hentry;
         }
 
