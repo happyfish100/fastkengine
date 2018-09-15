@@ -67,11 +67,7 @@ static void remove_spaces_after_chinese(string_t *input)
     p = (unsigned char *)input->str;
     end = (unsigned char *)input->str + input->len;
     while (p < end) {
-        if ((p + 2 < end) &&
-                ((((unsigned char)*p) & 0xF0) == 0xE0) &&
-                ((((unsigned char)*(p + 1)) & 0xC0) == 0x80) &&
-                ((((unsigned char)*(p + 2)) & 0xC0) == 0x80))
-        {
+        if (FC_IS_CHINESE_UTF8_CHAR(p, end)) {
             *dest++ = *p++;
             *dest++ = *p++;
             *dest++ = *p++;
@@ -83,6 +79,50 @@ static void remove_spaces_after_chinese(string_t *input)
         }
     }
     input->len = dest - (unsigned char *)input->str;
+}
+
+void keyword_normalize(string_t *keyword, string_t *formatted,
+        string_t *concated)
+{
+    char *p;
+    char *end;
+    char *dest;
+    int chinses_count;
+
+    chinses_count = 0;
+    p = keyword->str;
+    end = keyword->str + keyword->len;
+    while (p < end) {
+        if (FC_IS_CHINESE_UTF8_CHAR(p, end)) {
+            chinses_count++;
+            p += 3;
+        } else {
+            if (*p == '-' && ((p > keyword->str) && (p + 1 < end))) {
+                if (FC_IS_LETTER(*(p-1)) && FC_IS_LETTER(*(p+1))) {
+                    *p = ' ';
+                }
+            }
+            p++;
+        }
+    }
+
+    word_segment_normalize(keyword, formatted);
+    FC_STRING_TRIM(formatted);
+    if ((chinses_count > 0) || (memchr(formatted->str, ' ',
+                formatted->len) == NULL))
+    {
+        concated->len = 0;
+        return;
+    }
+
+    dest = concated->str;
+    end = formatted->str + formatted->len;
+    for (p=formatted->str; p<end; p++) {
+        if (*p != ' ') {
+            *dest++ = *p;
+        }
+    }
+    concated->len = dest - concated->str;
 }
 
 void word_segment_normalize(const string_t *input, string_t *output)
@@ -108,16 +148,12 @@ void word_segment_normalize(const string_t *input, string_t *output)
             p++;
         } else if (*p == '-') {
             *dest++ = *p++;
-            if (p > (unsigned char *)input->str && p + 1 < end) {
+            if ((p > (unsigned char *)input->str) && (p + 1 < end)) {
                 if (FC_IS_LETTER(*(p-1)) && FC_IS_LETTER(*(p+1))) {
                     dest--;  //ignore -
                 }
             }
-        } else if ((p + 2 < end) &&
-                ((((unsigned char)*p) & 0xF0) == 0xE0) &&
-                ((((unsigned char)*(p + 1)) & 0xC0) == 0x80) &&
-                ((((unsigned char)*(p + 2)) & 0xC0) == 0x80))
-        {
+        } else if (FC_IS_CHINESE_UTF8_CHAR(p, end)) {
             int old_char;
             old_char = ((*p & 0x1F) << 12) | ((*(p + 1) & 0x3F) << 6) | (*(p + 2) & 0x3F);
             if (old_char == 0x3000) { //blank char

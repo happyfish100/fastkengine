@@ -131,7 +131,7 @@ static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
         return NULL;
     }
     hentry->question.kcount = keywords_count;
-    hentry->answer = answer;
+    hentry->answer = *answer;
 
     hash_code = simple_hash(question->str, question->len);
     index = hash_code % context->htable.capacity;
@@ -200,6 +200,23 @@ int keyword_index_add(KeywordIndexContext *context,
     return insert_entry(context, &qentry.question, answer, keywords->count);
 }
 
+int keyword_index_adds(KeywordIndexContext *context,
+        const KeywordRecords *records, AnswerEntry *answer)
+{
+    const KeywordArray *p;
+    const KeywordArray *end;
+    int r;
+    int result = 0;
+
+    end = records->rows + records->count;
+    for (p=records->rows; p<end; p++) {
+       if ((r=keyword_index_add(context, p, answer)) != 0) {
+           result = r;
+       }
+    }
+    return result;
+}
+
 int keyword_index_find(KeywordIndexContext *context,
         const KeywordArray *keywords, QAEntry *qa)
 {
@@ -216,6 +233,6 @@ int keyword_index_find(KeywordIndexContext *context,
     }
 
     qa->question = &hentry->question;
-    qa->answer = hentry->answer;
+    qa->answer = &hentry->answer;
     return 0;
 }

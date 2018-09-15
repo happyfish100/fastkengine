@@ -50,8 +50,28 @@ extern "C" {
     int keyword_hashtable_init(KeywordHashtableContext *context, const int capacity,
             const SimilarKeywordsInput *similars);
 
+    KeywordHashEntry *keyword_hashtable_insert_ex(KeywordHashtableContext *context,
+        const string_t *keyword, const string_t *similar);
+
+    static inline int keyword_hashtable_insert(KeywordHashtableContext *context,
+            const string_t *keyword, const string_t *similar)
+    {
+        return (keyword_hashtable_insert_ex(context, keyword, similar)
+                != NULL) ?  0 : ENOMEM;
+    }
+
     KeywordHashEntry *keyword_hashtable_find(KeywordHashtableContext *context,
             const string_t *keyword);
+
+    static inline const string_t *keyword_hashtable_find_similar(
+            KeywordHashtableContext *context, const string_t *keyword)
+    {
+        KeywordHashEntry *hentry;
+        if ((hentry=keyword_hashtable_find(context, keyword)) == NULL) {
+            return NULL;
+        }
+        return hentry->similar.len > 0 ? &hentry->similar : NULL;
+    }
 
     KeywordHashEntry *keyword_hashtable_find_ex(KeywordHashtableContext *context,
             const string_t *chs, const int count);

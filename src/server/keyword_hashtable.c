@@ -147,7 +147,7 @@ static KeywordHashEntry *insert_char(KeywordHashtableContext *context,
     return hashtable_insert(context, *htable, ch, similar, keyword);
 }
 
-static int insert_keyword(KeywordHashtableContext *context,
+KeywordHashEntry *keyword_hashtable_insert_ex(KeywordHashtableContext *context,
         const string_t *keyword, const string_t *similar)
 {
     string_t ch;
@@ -158,6 +158,7 @@ static int insert_keyword(KeywordHashtableContext *context,
     KeywordHashtable **htable;
     KeywordHashEntry *hentry;
 
+    hentry = NULL;
     htable = &context->top;
     p = keyword->str;
     end = keyword->str + keyword->len;
@@ -172,16 +173,16 @@ static int insert_keyword(KeywordHashtableContext *context,
         logInfo("word[%d]: %.*s, last: %d",
                 i, ch.len, ch.str, p == end);
 
-        if ((hentry=insert_char(context, htable, ++i,
-                        &ch, p == end ? similar : &empty, keyword)) == 0)
+        if ((hentry=insert_char(context, htable, ++i, &ch,
+                        p == end ? similar : &empty, keyword)) == NULL)
         {
-            return ENOMEM;
+            return NULL;
         }
 
         htable = &hentry->children;
     }
 
-    return 0;
+    return hentry;
 }
 
 KeywordHashEntry *keyword_hashtable_find(KeywordHashtableContext *context,
@@ -291,7 +292,7 @@ static int similar_keywords_init(KeywordHashtableContext *context,
         for (i=1; i<n; i++) {
             FC_SET_STRING(word, keywords[i]);
             if (!fc_string_equal(&word, &similar)) {
-                result = insert_keyword(context, &word, &similar);
+                result = keyword_hashtable_insert(context, &word, &similar);
                 if (result != 0) {
                     break;
                 }
@@ -346,7 +347,7 @@ int keyword_hashtable_add_keywords(KeywordHashtableContext *context,
     result = 0;
     end = keywords->keywords + keywords->count;
     for (key=keywords->keywords; key<end; key++) {
-        if ((result=insert_keyword(context, key, key)) != 0) {
+        if ((result=keyword_hashtable_insert(context, key, key)) != 0) {
             if (result == EINVAL || result == EEXIST) {
                 result = 0;
                 continue;

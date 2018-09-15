@@ -19,7 +19,7 @@ typedef struct question_buffer {
 
 typedef struct keyword_index_hash_entry {
     QuestionEntry question;
-    AnswerEntry *answer;
+    AnswerEntry answer;
     struct keyword_index_hash_entry *next;
 } KeywordIndexHashEntry;
 
@@ -44,6 +44,9 @@ extern "C" {
 
     int keyword_index_add(KeywordIndexContext *context,
             const KeywordArray *keywords, AnswerEntry *answer);
+
+    int keyword_index_adds(KeywordIndexContext *context,
+            const KeywordRecords *records, AnswerEntry *answer);
 
     int keyword_index_find(KeywordIndexContext *context,
             const KeywordArray *keywords, QAEntry *qa);

@@ -26,6 +26,7 @@
 #include "keyword_index.h"
 #include "server_global.h"
 #include "qa_reader.h"
+#include "qa_loader.h"
 #include "question_search.h"
 //#include "common/fcfg_proto.h"
 //#include "common/fcfg_types.h"
@@ -175,11 +176,13 @@ static int test_segment()
     char **rows;
     KeywordArray keywords;
     SimilarKeywordsInput similars;
-    FastBuffer buffer;
     QAReaderContext reader;
     string_t question;
     QAArray results;
     int index;
+    const char *filenames[10];
+    int file_count = 0;
+
     const char *keywords_filename = "/Users/yuqing/Devel/fastkengine/conf/keywords.txt";
     const char *similars_filename = "/Users/yuqing/Devel/fastkengine/conf/similars.txt";
 
@@ -218,38 +221,53 @@ static int test_segment()
         }
     }
 
+    filenames[file_count++] = "../../conf/unix/file.ken";
+    result = qa_loader_init(filenames, file_count);
+
     if (0) {
-    if ((result=fast_buffer_init_ex(&buffer, 4096)) != 0) {
-        return result;
-    }
-
-    result = qa_reader_init(&reader, &g_server_vars.kh_context.string_allocator,
-            &buffer, "../../conf/unix/file.ken");
-    if (result != 0) {
-        return result;
-    }
-
-    while (1) {
-        QAReaderEntry entry;
-        if (qa_reader_next(&reader, &entry) != 0) {
-            break;
+        FastBuffer buffer;
+        if ((result=fast_buffer_init_ex(&buffer, 4096)) != 0) {
+            return result;
         }
-    }
-    fast_buffer_destroy(&buffer);
+
+        result = qa_reader_init(&reader, &g_server_vars.kh_context.string_allocator,
+                &buffer, "");
+        if (result != 0) {
+            return result;
+        }
+
+        while (1) {
+            QAReaderEntry entry;
+            if (qa_reader_next(&reader, &entry) != 0) {
+                break;
+            }
+        }
+        fast_buffer_destroy(&buffer);
     }
 
     index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
     question = keywords.keywords[index];
 
-    //question.str = "查 找 文 件 列  表";
+    question.str = "查 找 文 件 列  表";
     //question.str = "文件b超查找";
-    question.str = "中华 人民 共和国 中华 万岁";
+    //question.str = "中华 人民 共和国 中华 万岁";
     question.len = strlen(question.str);
 
     logInfo("row_count: %d, index: %d, %.*s", row_count, index, question.len, question.str);
 
     if ((result=question_search(&question, &results)) != 0) {
         return result;
+    }
+
+    printf("answer count: %d\n", results.count);
+    for (i=0; i<results.count; i++) {
+        printf("answer[%d] START ###########\n", i + 1);
+
+        for (int k=0; k<results.entries[i].answer->condition_answers.count; k++) {
+                printf("%.*s\n\n", FC_PRINTF_STAR_STRING_PARAMS(results.entries[i].
+                            answer->condition_answers.entries[k].answer));
+        }
+        printf("answer[%d] END ###########\n\n", i + 1);
     }
 
     freeSplit(rows);

@@ -29,6 +29,9 @@ extern "C" {
 
     void word_segment_normalize(const string_t *input, string_t *output);
 
+    void keyword_normalize(string_t *keyword, string_t *formatted,
+            string_t *concated);
+
     void keywords_unique(KeywordArray *karray);
 
     void keyword_records_unique(KeywordRecords *results);
