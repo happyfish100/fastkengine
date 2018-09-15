@@ -25,8 +25,8 @@ typedef struct keyword_records {
 } KeywordRecords;
 
 typedef struct question_entry {
+    KeywordArray karray;
     string_t q;   //multi keywords splited by seperator
-    int kcount;   //keywords count
 } QuestionEntry;
 
 typedef struct condition_answer_entry {

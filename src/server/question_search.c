@@ -95,8 +95,8 @@ static int compare_question_length(const void *p1, const void *p2)
     result = ((const QAEntry *)p1)->question->q.len -
         ((const QAEntry *)p2)->question->q.len;
     if (result == 0) {
-        return ((const QAEntry *)p2)->question->kcount -
-            ((const QAEntry *)p1)->question->kcount;
+        return ((const QAEntry *)p2)->question->karray.count -
+            ((const QAEntry *)p1)->question->karray.count;
     } else {
         return result;
     }

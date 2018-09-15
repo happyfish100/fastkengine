@@ -37,7 +37,6 @@ typedef struct keyword_hashtable {
 typedef struct keyword_hashtable_context {
     KeywordHashtable *top;
     int top_capacity;
-    int max_chinese_chars;
     struct fast_mblock_man htable_allocator;
     struct fast_mblock_man hentry_allocator;
     struct fast_mpool_man  string_allocator;

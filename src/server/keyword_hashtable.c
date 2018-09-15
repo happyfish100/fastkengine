@@ -5,6 +5,7 @@
 #include "fastcommon/hash.h"
 #include "fastcommon/shared_func.h"
 #include "wordsegment.h"
+#include "qa_loader.h"
 #include "keyword_hashtable.h"
 
 static int hashtable_init(KeywordHashtableContext *context,
@@ -174,7 +175,7 @@ KeywordHashEntry *keyword_hashtable_insert_ex(KeywordHashtableContext *context,
                 i, ch.len, ch.str, p == end);
 
         if ((hentry=insert_char(context, htable, ++i, &ch,
-                        p == end ? similar : &empty, keyword)) == NULL)
+                        (p == end) ? similar : &empty, keyword)) == NULL)
         {
             return NULL;
         }
@@ -262,6 +263,89 @@ KeywordHashEntry *keyword_hashtable_find_ex(KeywordHashtableContext *context,
     return NULL;
 }
 
+static int split_similar_keywords(char *line, string_t *keywords,
+        const int max)
+{
+    char *p;
+    char *end;
+    string_t *dest;
+
+    dest = keywords;
+    p = line;
+    end = p + strlen(line);
+    while (p < end) {
+        while ((p < end) && (*p == ' ' || *p == '\t')) {
+            p++;
+        }
+        if (p == end) {
+            break;
+        }
+
+        if (dest - keywords >= max) {
+                logWarning("file: "__FILE__", line: %d, "
+                        "too many keywords exceeds %d in similar file",
+                        __LINE__, max);
+                break;
+        }
+
+        if (*p == '(') {
+            dest->str = ++p;
+            while ((p < end) && (*p != ')')) {
+                p++;
+            }
+            if (p == end) {
+                logWarning("file: "__FILE__", line: %d, "
+                        "expect ) in similar file, line: %s",
+                        __LINE__, line);
+            }
+        } else {
+            dest->str = p;
+            while ((p < end) && !(*p == ' ' || *p == '\t')) {
+                p++;
+            }
+        }
+        dest->len = p - dest->str;
+        dest++;
+        p++; //skip seperator
+    }
+
+    return dest - keywords;
+}
+
+static KeywordHashEntry *insert_keyword_and_similar(
+        KeywordHashtableContext *context,
+        string_t *keyword, const string_t *similar)
+{
+    string_t formatted;
+    string_t concated;
+    char fholder[256];
+    char cholder[256];
+
+    if (keyword->len > sizeof(fholder)) {
+        logWarning("file: "__FILE__", line: %d, "
+                "keywords length %d exceeds %d",
+                __LINE__, keyword->len, (int)sizeof(fholder));
+        return NULL;
+    }
+
+    formatted.str = fholder;
+    concated.str = cholder;
+    keyword_normalize(keyword, &formatted, &concated);
+    if (formatted.len == 0) {
+        return NULL;
+    }
+
+    if (concated.len > 0) {
+        if (keyword_hashtable_insert_ex(context,
+                    &concated, similar) == NULL)
+        {
+            return NULL;
+        }
+    }
+
+    return keyword_hashtable_insert_ex(context, &formatted, similar);
+}
+
 static int similar_keywords_init(KeywordHashtableContext *context,
         const SimilarKeywordsInput *similars)
 {
@@ -269,11 +353,12 @@ static int similar_keywords_init(KeywordHashtableContext *context,
 
     char **line;
     char **end;
-    string_t word;
-    string_t similar;
-    char *keywords[MAX_SIMILAR_WORDS_COUNT];
-    int n;
-    int i;
+    string_t *word;
+    const string_t *similar;
+    string_t keywords[MAX_SIMILAR_WORDS_COUNT];
+    string_t *p;
+    string_t *kend;
+    int count;
     int result = 0;
 
     end = similars->lines + similars->count;
@@ -281,21 +366,21 @@ static int similar_keywords_init(KeywordHashtableContext *context,
         if (**line == '\0') {
             continue;
         }
-        n = splitEx(*line, similars->seperator, keywords, MAX_SIMILAR_WORDS_COUNT);
-        if (n <= 1) {
+        count = split_similar_keywords(*line, keywords, MAX_SIMILAR_WORDS_COUNT);
+        if (count <= 1) {
             logWarning("file: "__FILE__", line: %d, "
                     "invalid similar keywords: %s", __LINE__, *line);
             continue;
         }
 
-        FC_SET_STRING(similar, keywords[0]);
-        for (i=1; i<n; i++) {
-            FC_SET_STRING(word, keywords[i]);
-            if (!fc_string_equal(&word, &similar)) {
-                result = keyword_hashtable_insert(context, &word, &similar);
-                if (result != 0) {
-                    break;
-                }
+        word = keywords + 0;
+        similar = keyword_to_similar(word);
+
+        kend = keywords + count;
+        for (p = keywords + 1; p < kend; p++) {
+            if (insert_keyword_and_similar(context, p, similar) == NULL) {
+                result = ENOMEM;
+                break;
             }
         }
     }
@@ -325,8 +410,11 @@ int keyword_hashtable_init(KeywordHashtableContext *context, const int capacity,
     if ((result=fast_mpool_init(&context->string_allocator, 0, 32)) != 0) {
         return result;
     }
+
+    if ((result=hashtable_init(context, &context->top, capacity)) != 0) {
+        return result;
+    }
     
-    context->max_chinese_chars = 0;
     return similar_keywords_init(context, similars);
 }
 

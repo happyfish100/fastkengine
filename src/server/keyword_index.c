@@ -110,7 +110,8 @@ static KeywordIndexHashEntry *hashtable_find(KeywordIndexContext *context,
 }
 
 static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
-        const string_t *question, AnswerEntry *answer, const int keywords_count)
+        const string_t *question, AnswerEntry *answer,
+        const KeywordArray *karray)
 {
     KeywordIndexHashEntry *hentry;
     unsigned int hash_code;
@@ -130,7 +131,9 @@ static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
     {
         return NULL;
     }
-    hentry->question.kcount = keywords_count;
+    hentry->question.karray.count = karray->count;
+    memcpy(hentry->question.karray.keywords, karray->keywords,
+            sizeof(string_t) * karray->count);
     hentry->answer = *answer;
 
     hash_code = simple_hash(question->str, question->len);
@@ -142,7 +145,7 @@ static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
 
 static int insert_entry(KeywordIndexContext *context,
         const string_t *question, AnswerEntry *answer,
-        const int keywords_count)
+        const KeywordArray *karray)
 {
     KeywordIndexHashEntry *hentry;
 
@@ -154,7 +157,7 @@ static int insert_entry(KeywordIndexContext *context,
         return EEXIST;
     }
 
-    return hashtable_insert(context, question, answer, keywords_count)
+    return hashtable_insert(context, question, answer, karray)
         != NULL ? 0 : ENOMEM;
 }
 
@@ -197,7 +200,7 @@ int keyword_index_add(KeywordIndexContext *context,
         return result;
     }
 
-    return insert_entry(context, &qentry.question, answer, keywords->count);
+    return insert_entry(context, &qentry.question, answer, keywords);
 }
 
 int keyword_index_adds(KeywordIndexContext *context,

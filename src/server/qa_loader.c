@@ -56,8 +56,8 @@ const string_t *keyword_to_similar(string_t *keyword)
     }
 
     if (concated.len > 0) {
-        if ((csimilar=try_insert_keyword_and_similar(&concated, &concated))
-                == NULL)
+        if ((csimilar=try_insert_keyword_and_similar(&concated,
+                        &concated)) == NULL)
         {
             return NULL;
         }
@@ -79,13 +79,12 @@ static void keywords_to_similar(KeywordArray *karray)
     for (p = karray->keywords; p < end; p++) {
         similar = keyword_to_similar(p);
         if (similar == NULL) {
-            p->len = 0;
+            FC_SET_STRING_NULL(*p);
             continue;
         }
 
-        if (!fc_string_equal(p, similar)) {
-            *p = *similar;
-        }
+        /* MUST to copy members for persistent in keyword_index hashtable */
+        *p = *similar;
     }
 }
 
