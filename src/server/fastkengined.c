@@ -251,6 +251,8 @@ static int test_segment()
     question = keywords.keywords[index];
 
     question.str = "查 找 文 件 列  表";
+    question.str = "生成 core-dump";
+    question.str = "core   dump设置生成 ";
     //question.str = "文件b超查找";
     //question.str = "中华 人民 共和国 中华 万岁";
     question.len = strlen(question.str);

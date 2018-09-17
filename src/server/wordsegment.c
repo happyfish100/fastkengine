@@ -49,9 +49,11 @@ int word_segment_next_word(const char **pp, const char *end, string_t *ch)
         *pp += 3;
         return 0;
     } else {
-        logWarning("file: "__FILE__", line: %d, "
-                "invalid character: %c(0x%02x)",
-                __LINE__, **pp, ((unsigned char)**pp) & 0xFF);
+        if (**pp != ' ') {
+            logWarning("file: "__FILE__", line: %d, "
+                    "invalid character: %c(0x%02x)",
+                    __LINE__, **pp, ((unsigned char)**pp) & 0xFF);
+        }
         *pp += 1;  //skip unknown char
         return EINVAL;
     }
@@ -147,12 +149,13 @@ void word_segment_normalize(const string_t *input, string_t *output)
             space_count++;
             p++;
         } else if (*p == '-') {
-            *dest++ = *p++;
+            *dest++ = *p;
             if ((p > (unsigned char *)input->str) && (p + 1 < end)) {
                 if (FC_IS_LETTER(*(p-1)) && FC_IS_LETTER(*(p+1))) {
                     dest--;  //ignore -
                 }
             }
+            p++;
         } else if (FC_IS_CHINESE_UTF8_CHAR(p, end)) {
             int old_char;
             old_char = ((*p & 0x1F) << 12) | ((*(p + 1) & 0x3F) << 6) | (*(p + 2) & 0x3F);
@@ -607,7 +610,7 @@ static int word_segment_do_split(WordSegmentArray *output)
                 break;
             }
 
-            while (p < end && *p == ' ') {
+            while ((p < end) && (*p == ' ')) {
                 p++;
             }
             if (word_segment_next_word(&p, end, &word) != 0) {

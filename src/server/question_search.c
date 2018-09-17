@@ -147,6 +147,7 @@ static int search_keywords(const KeywordArray *keywords, QAArray *results)
     if ((result=keyword_index_find(&g_server_vars.ki_context,
                     keywords, &qa)) == 0)
     {
+        results->matched_count++;
         add_answer(results, &qa);
     }
 
@@ -269,8 +270,10 @@ int question_search(const string_t *question, const AnswerConditionArray
     int level;
     int i;
 
-    results->match_count = 0;
+    results->scan_count = 0;
+    results->matched_count = 0;
     results->count = 0;
+    qa_array.matched_count = 0;
     qa_array.count = 0;
     if ((result=word_segment_split(question, &ws_out)) != 0) {
         return result;
@@ -290,7 +293,7 @@ int question_search(const string_t *question, const AnswerConditionArray
             done[i++] = false;
         }
     }
-    results->match_count += ws_out.results.count;
+    results->scan_count += ws_out.results.count;
 
     level = 1;
     while (done_count < ws_out.results.count) {
@@ -313,15 +316,16 @@ int question_search(const string_t *question, const AnswerConditionArray
                     done[i]++;
                     done_count++;
                 }
-               results->match_count += records.count;
+               results->scan_count += records.count;
             }
         }
 
         level++;
     }
 
-    logInfo("found count: %d, match_count: %d",qa_array.count,
-           results->match_count);
+    results->matched_count = qa_array.matched_count;
+    logInfo("found count: %d, scan_count: %d, matched_count: %d", qa_array.count,
+           results->scan_count, results->matched_count);
 
     word_segment_free_result(&ws_out);
     return match_answers(&qa_array, conditions, results);

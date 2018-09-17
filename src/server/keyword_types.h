@@ -58,6 +58,7 @@ typedef struct question_answer_entry {
 typedef struct question_answer_array {
     QAEntry entries[MAX_ANSWER_COUNT];
     int count;    //entry count
+    int matched_count;
 } QAArray;
 
 typedef struct qa_search_result_entry {
@@ -69,7 +70,8 @@ typedef struct qa_search_result_entry {
 typedef struct qa_search_result_array {
     QASearchResultEntry entries[MAX_ANSWER_COUNT];
     int count;    //entry count
-    int match_count;
+    int scan_count;
+    int matched_count;
 } QASearchResultArray;
 
 #endif

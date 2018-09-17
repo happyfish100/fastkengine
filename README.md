@@ -22,24 +22,30 @@ FastKEngine is a knowledge engine based keywords matching.
   the charset is UTF-8.
 
   multi questions correspond to one answer, question matchs success
-  when all requred keywords of a question are matched.
+  when all required keywords of a question are matched.
 
   you should segment Chinese words manually.
 
   the conditions like "key1=value1 key2=value2" in the answer is optional,
-  eg. [[answer]] for no additional condition.
+  eg. [[answer]] for no additional condition. the key and value can be quoted with
+  double or single quotation marks. eg. [[answer uname="Linux"]]
 
   the answer is composite when [[answer ...]] occurs many times after one [[question]].
 
   question keywords:
     * with a pipe line (|) for match any one of the keywords, eg.
-      core-dump location | position
+      (core dump) location|position
+      core-dump (location | position)
+
+      hint: the second question use round brackets to ignore spaces with pipe line (|)
 
     * keywords quoted within  [ and ] are optional keywords, [...] must be
       the last part of the question. eg.
-      file size descending [list|show]
+      file size descending [list | show]
 
-    * the English words with a minus sign (-) for a whole,
+    * multi English words as a matching keyword when:
+        I.  minus sign (-) between multi words, such as core-dump, out-of-memory
+        II. quoted with round brackets, such as (core dump), (out of memory）
       eg. "core-dump" matchs "core dump", "coredump" and "core-dump", but NOT match "dump core".
 ```
 
