@@ -4,6 +4,7 @@
 #include "fastcommon/logger.h"
 #include "fastcommon/hash.h"
 #include "fastcommon/shared_func.h"
+#include "qa_reader.h"
 #include "server_global.h"
 #include "question_search.h"
 
@@ -206,6 +207,35 @@ static int question_search_all(KeywordRecords *records, QAArray *results)
     return done_count;
 }
 
+static int match_answers(QAArray *qa_array, const AnswerConditionArray
+        *conditions, QASearchResultArray *results)
+{
+    QAEntry *p;
+    QAEntry *end;
+    ConditionAnswerEntry *ca;
+    ConditionAnswerEntry *ca_end;
+    QASearchResultEntry *dest;
+
+    dest = results->entries;
+    end = qa_array->entries + qa_array->count;
+    for (p=qa_array->entries; p<end; p++) {
+        ca_end = p->answer->condition_answers.entries +
+            p->answer->condition_answers.count;
+        for (ca=p->answer->condition_answers.entries; ca<ca_end; ca++) {
+            if (compare_answer_conditions(conditions, &ca->conditions) == 0) {
+                dest->question = p->question;
+                dest->answer = &ca->answer;
+                dest->id = p->answer->id;
+                dest++;
+                break;
+            }
+        }
+    }
+
+    results->count = dest - results->entries;
+    return results->count > 0 ? 0 : ENOENT;
+}
+
 static void print_keyword_records(KeywordRecords *records)
 {
     int i, k;
@@ -225,10 +255,12 @@ static void print_keyword_records(KeywordRecords *records)
     printf("\n");
 }
 
-int question_search(const string_t *question, QAArray *results)
+int question_search(const string_t *question, const AnswerConditionArray
+        *conditions, QASearchResultArray *results)
 {
     int result;
-    WordSegmentArray output;
+    WordSegmentArray ws_out;
+    QAArray qa_array;
     KeywordRecords records;
     KeywordArray *p;
     KeywordArray *end;
@@ -237,19 +269,20 @@ int question_search(const string_t *question, QAArray *results)
     int level;
     int i;
 
-    results->count = 0;
     results->match_count = 0;
-    if ((result=word_segment_split(question, &output)) != 0) {
+    results->count = 0;
+    qa_array.count = 0;
+    if ((result=word_segment_split(question, &ws_out)) != 0) {
         return result;
     }
 
-    print_keyword_records(&output.results);
+    print_keyword_records(&ws_out.results);
 
     done_count = 0;
     i = 0;
-    end = output.results.rows + output.results.count;
-    for (p=output.results.rows; p<end; p++) {
-        result = search_keywords(p, results);
+    end = ws_out.results.rows + ws_out.results.count;
+    for (p=ws_out.results.rows; p<end; p++) {
+        result = search_keywords(p, &qa_array);
         if (result == 0 || result == EOVERFLOW || p->count <= 1) {
             done[i++] = true;
             done_count++;
@@ -257,39 +290,39 @@ int question_search(const string_t *question, QAArray *results)
             done[i++] = false;
         }
     }
-    results->match_count += output.results.count;
+    results->match_count += ws_out.results.count;
 
     level = 1;
-    while (done_count < output.results.count) {
+    while (done_count < ws_out.results.count) {
         done_count = 0; 
-        for (i=0; i<output.results.count; i++) {
+        for (i=0; i<ws_out.results.count; i++) {
             if (done[i]) {
                 done_count++;
-            } else if (output.results.rows[i].count <= level) {
+            } else if (ws_out.results.rows[i].count <= level) {
                 done[i]++;
                 done_count++;
             } else {
-                gen_combined_keywords(output.results.rows + i,
-                        output.results.rows[i].count - level, &records);
+                gen_combined_keywords(ws_out.results.rows + i,
+                        ws_out.results.rows[i].count - level, &records);
 
-                printf("C [%d/%d]\n", output.results.rows[i].count - level,
-                        output.results.rows[i].count);
+                printf("C [%d/%d]\n", ws_out.results.rows[i].count - level,
+                        ws_out.results.rows[i].count);
                 print_keyword_records(&records);
 
-                if (question_search_all(&records, results) > 0) {
+                if (question_search_all(&records, &qa_array) > 0) {
                     done[i]++;
                     done_count++;
                 }
-                results->match_count += records.count;
+               results->match_count += records.count;
             }
         }
 
         level++;
     }
 
-    logInfo("found count: %d, match_count: %d", results->count,
-            results->match_count);
+    logInfo("found count: %d, match_count: %d",qa_array.count,
+           results->match_count);
 
-    word_segment_free_result(&output);
-    return 0;
+    word_segment_free_result(&ws_out);
+    return match_answers(&qa_array, conditions, results);
 }

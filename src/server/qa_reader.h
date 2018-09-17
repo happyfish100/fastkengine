@@ -33,6 +33,9 @@ extern "C" {
 
     int qa_reader_next(QAReaderContext *context, QAReaderEntry *entry);
 
+    int compare_answer_conditions(const AnswerConditionArray *cond1,
+            const AnswerConditionArray *cond2);
+
 #ifdef __cplusplus
 }
 #endif

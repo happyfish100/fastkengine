@@ -12,7 +12,7 @@
 #include "server_global.h"
 #include "qa_reader.h"
 
-#define QA_TAG_MAX_ATTRIBUTES   5
+#define QA_TAG_MAX_ATTRIBUTES   MAX_CONDITION_COUNT
 #define QA_SHOW_CONTENT_SIZE    256
 #define QA_MAX_ANSWER_ENTRIES   64
 
@@ -755,31 +755,33 @@ static int compare_key_value_pair(const void *p1, const void *p2)
     return fc_string_compare(&kv1->value, &kv2->value);
 }
 
-static int compare_by_answer_conditions(const void *p1, const void *p2)
+int compare_answer_conditions(const AnswerConditionArray *cond1,
+        const AnswerConditionArray *cond2)
 {
-    ConditionAnswerEntry *entry1;
-    ConditionAnswerEntry *entry2;
     int sub;
     int result;
     int i;
 
-    entry1 = (ConditionAnswerEntry *)p1;
-    entry2 = (ConditionAnswerEntry *)p2;
-
-    sub = entry1->conditions.count - entry2->conditions.count;
+    sub = cond1->count - cond2->count;
     if (sub != 0) {
         return sub;
     }
 
-    for (i=0; i<entry1->conditions.count; i++) {
-        if ((result=compare_key_value_pair(entry1->conditions.kv_pairs + i,
-                        entry2->conditions.kv_pairs + i)) != 0)
+    for (i=0; i<cond1->count; i++) {
+        if ((result=compare_key_value_pair(cond1->kv_pairs + i,
+                        cond2->kv_pairs + i)) != 0)
         {
             return result;
         }
     }
 
     return 0;
+}
+
+static int compare_by_answer_conditions(const ConditionAnswerEntry *entry1,
+        const ConditionAnswerEntry *entry2)
+{
+    return compare_answer_conditions(&entry1->conditions, &entry2->conditions);
 }
 
 static int add_unique_answers(QAReaderContext *context,
@@ -808,7 +810,7 @@ static int add_unique_answers(QAReaderContext *context,
         memcpy(sorted_entries, answer_entries,
                 sizeof(ConditionAnswerEntry) * count);
         qsort(sorted_entries, count, sizeof(ConditionAnswerEntry),
-                compare_by_answer_conditions);
+                (int (*)(const void *, const void *))compare_by_answer_conditions);
        
         end = sorted_entries + count;
         dest = unique_entries;

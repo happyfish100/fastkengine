@@ -178,7 +178,9 @@ static int test_segment()
     SimilarKeywordsInput similars;
     QAReaderContext reader;
     string_t question;
-    QAArray results;
+    key_value_pair_t kv_pairs[MAX_CONDITION_COUNT];
+    AnswerConditionArray conditions;
+    QASearchResultArray results;
     int index;
     const char *filenames[10];
     int file_count = 0;
@@ -254,19 +256,18 @@ static int test_segment()
     question.len = strlen(question.str);
 
     logInfo("row_count: %d, index: %d, %.*s", row_count, index, question.len, question.str);
-
-    if ((result=question_search(&question, &results)) != 0) {
+    conditions.kv_pairs = kv_pairs;
+    FC_SET_STRING(conditions.kv_pairs[0].key, "uname");
+    FC_SET_STRING(conditions.kv_pairs[0].value, "Linux");
+    conditions.count = 1;
+    if ((result=question_search(&question, &conditions, &results)) != 0) {
         return result;
     }
 
     printf("answer count: %d\n", results.count);
     for (i=0; i<results.count; i++) {
         printf("answer[%d] START ###########\n", i + 1);
-
-        for (int k=0; k<results.entries[i].answer->condition_answers.count; k++) {
-                printf("%.*s\n\n", FC_PRINTF_STAR_STRING_PARAMS(results.entries[i].
-                            answer->condition_answers.entries[k].answer));
-        }
+        printf("%.*s\n\n", FC_PRINTF_STAR_STRING_PARAMS(*(results.entries[i].answer)));
         printf("answer[%d] END ###########\n\n", i + 1);
     }
 

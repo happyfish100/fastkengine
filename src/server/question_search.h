@@ -17,7 +17,8 @@ extern "C" {
 #endif
 
     void init_combination_index_arrays();
-    int question_search(const string_t *question, QAArray *results);
+    int question_search(const string_t *question, const AnswerConditionArray
+        *conditions, QASearchResultArray *results);
 
 #ifdef __cplusplus
 }
