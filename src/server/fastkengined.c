@@ -79,13 +79,14 @@ int main(int argc, char *argv[])
     srand(time(NULL));
     rand();
 
-    //r = test_similar_words();
-    r = test_segment();
-    return r;
-
     sched_set_delay_params(300, 1024);
     r = setup_server_env(config_filename);
     gofailif(r,"");
+
+
+    //r = test_similar_words();
+    r = test_segment();
+    return r;
 
     r = sf_startup_schedule(&schedule_tid);
     gofailif(r,"");
@@ -143,15 +144,13 @@ static int setup_server_env(const char *config_filename)
 
     sf_set_current_time();
 
-    /*
-    result = fcfg_server_load_config(config_filename);
+    result = kengine_load_config_and_data(config_filename);
     if (result != 0) {
         fprintf(stderr, "load from conf file %s fail, "
                 "erro no: %d, error info: %s",
                 config_filename, result, strerror(result));
         return result;
     }
-    */
 
     if (daemon_mode) {
         daemon_init(false);
@@ -182,7 +181,7 @@ static int test_segment()
     AnswerConditionArray conditions;
     QASearchResultArray results;
     int index;
-    const char *filenames[10];
+    char *filenames[10];
     int file_count = 0;
 
     const char *keywords_filename = "/Users/yuqing/Devel/fastkengine/conf/keywords.txt";
@@ -198,12 +197,11 @@ static int test_segment()
     }
 
     similars.lines = split(similars_buff, '\n', 0, &similars.count);
-    similars.seperator = ' ';
 
     init_combination_index_arrays();
     keyword_index_init(&g_server_vars.ki_context, 1024 * 1024);
 
-    result = keyword_hashtable_init(&g_server_vars.kh_context, 102400, &similars);
+    result = keyword_hashtable_init(&g_server_vars.kh_context, 10240, &similars);
     if (result != 0) {
         return result;
     }
@@ -274,5 +272,6 @@ static int test_segment()
     }
 
     freeSplit(rows);
+    sleep(60);
     return result;
 }

@@ -123,7 +123,7 @@ static int load_question_answers(QAReaderContext *reader)
     return result;
 }
  
-int qa_loader_init(const char **filenames, const int count)
+int qa_loader_init(char **filenames, const int count)
 {
     int result;
     QAReaderContext reader;

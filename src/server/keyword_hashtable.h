@@ -16,7 +16,6 @@
 typedef struct similar_keyword_input  {
     char **lines;
     int count;
-    char seperator;
 } SimilarKeywordsInput;
 
 struct keyword_hashtable;

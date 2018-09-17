@@ -15,6 +15,9 @@
 #define MAX_ANSWER_COUNT      5
 #define MAX_CONDITION_COUNT   5
 
+#define KENGINE_DEFAULT_INNER_PORT   10000
+#define KENGINE_DEFAULT_OUTER_PORT   10000
+
 typedef struct keyword_array {
     string_t keywords[MAX_KEYWORDS_COUNT];
     int count;

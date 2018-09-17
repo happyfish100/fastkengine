@@ -9,7 +9,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    int qa_loader_init(const char **filenames, const int count);
+    int qa_loader_init(char **filenames, const int count);
     const string_t *keyword_to_similar(string_t *keyword);
 
 #ifdef __cplusplus
