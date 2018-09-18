@@ -1,0 +1,14 @@
+文件 文档 file
+目录 directory dir
+时间 日期 time date datetime
+显示 展示 show
+查找 找出 找到 find
+列举 列出 排列 列表 list
+降序 倒序 倒排 descending descend desc
+升序 正序 顺序 ascending ascend asc
+如何 怎样 how how-to
+生成 产生 产出 形成 generate produce
+大小 尺寸 size
+位置 地方 哪儿 哪里 那儿 那里 position  location place
+设置 设定 配置 set setting config configure configuration
+删除 移除 delete remove
