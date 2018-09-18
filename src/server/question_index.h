@@ -1,4 +1,4 @@
-//keyword_index.h
+//question_index.h
 
 #ifndef _KEYWORD_INDEX_H
 #define _KEYWORD_INDEX_H
@@ -17,18 +17,18 @@ typedef struct question_buffer {
     char buff[256];   //for internal use
 } QuestionBuffer;
 
-typedef struct keyword_index_hash_entry {
+typedef struct question_index_hash_entry {
     QuestionEntry question;
     AnswerEntry answer;
-    struct keyword_index_hash_entry *next;
+    struct question_index_hash_entry *next;
 } KeywordIndexHashEntry;
 
-typedef struct keyword_index_hash_table {
-    struct keyword_index_hash_entry **buckets;
+typedef struct question_index_hash_table {
+    struct question_index_hash_entry **buckets;
     int capacity;
 } KeywordIndexHashTable;
 
-typedef struct keyword_index_context {
+typedef struct question_index_context {
     KeywordIndexHashTable htable;
     struct fast_mblock_man hentry_allocator;
     struct fast_mpool_man  string_allocator;
@@ -38,20 +38,20 @@ typedef struct keyword_index_context {
 extern "C" {
 #endif
 
-    int keyword_index_init(KeywordIndexContext *context, const int capacity);
+    int question_index_init(KeywordIndexContext *context, const int capacity);
 
-    void keyword_index_destroy(KeywordIndexContext *context);
+    void question_index_destroy(KeywordIndexContext *context);
 
-    int keyword_index_add(KeywordIndexContext *context,
+    int question_index_add(KeywordIndexContext *context,
             const KeywordArray *keywords, AnswerEntry *answer);
 
-    int keyword_index_adds(KeywordIndexContext *context,
+    int question_index_adds(KeywordIndexContext *context,
             const KeywordRecords *records, AnswerEntry *answer);
 
-    int keyword_index_find(KeywordIndexContext *context,
+    int question_index_find(KeywordIndexContext *context,
             const KeywordArray *keywords, QAEntry *qa);
 
-    int keyword_index_key_length(const KeywordArray *keywords);
+    int question_index_key_length(const KeywordArray *keywords);
 
 #ifdef __cplusplus
 }

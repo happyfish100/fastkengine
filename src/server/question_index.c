@@ -4,11 +4,11 @@
 #include "fastcommon/logger.h"
 #include "fastcommon/hash.h"
 #include "fastcommon/shared_func.h"
-#include "keyword_index.h"
+#include "question_index.h"
 
 #define KEYWORDS_SEPERATOR   '\x1'
 
-int keyword_index_key_length(const KeywordArray *keywords)
+int question_index_key_length(const KeywordArray *keywords)
 {
     int length;
     int i;
@@ -77,8 +77,8 @@ static int hashtable_init(KeywordIndexContext *context, const int capacity)
     }
 
     context->htable.capacity = *pcapacity;
-    bytes = sizeof(struct keyword_index_hash_entry *) * context->htable.capacity;
-    context->htable.buckets = (struct keyword_index_hash_entry **)malloc(bytes);
+    bytes = sizeof(struct question_index_hash_entry *) * context->htable.capacity;
+    context->htable.buckets = (struct question_index_hash_entry **)malloc(bytes);
     if (context->htable.buckets == NULL) {
         logError("file: "__FILE__", line: %d, "
                 "malloc %d bytes fail", __LINE__, bytes);
@@ -161,7 +161,7 @@ static int insert_entry(KeywordIndexContext *context,
         != NULL ? 0 : ENOMEM;
 }
 
-int keyword_index_init(KeywordIndexContext *context, const int capacity)
+int question_index_init(KeywordIndexContext *context, const int capacity)
 {
     int result;
 
@@ -182,7 +182,7 @@ int keyword_index_init(KeywordIndexContext *context, const int capacity)
     return result;
 }
 
-void keyword_index_destroy(KeywordIndexContext *context)
+void question_index_destroy(KeywordIndexContext *context)
 {
     fast_mblock_destroy(&context->hentry_allocator);
     fast_mpool_destroy(&context->string_allocator);
@@ -190,7 +190,7 @@ void keyword_index_destroy(KeywordIndexContext *context)
     context->htable.buckets = NULL;
 }
 
-int keyword_index_add(KeywordIndexContext *context,
+int question_index_add(KeywordIndexContext *context,
         const KeywordArray *keywords, AnswerEntry *answer)
 {
     QuestionBuffer qentry;
@@ -203,7 +203,7 @@ int keyword_index_add(KeywordIndexContext *context,
     return insert_entry(context, &qentry.question, answer, keywords);
 }
 
-int keyword_index_adds(KeywordIndexContext *context,
+int question_index_adds(KeywordIndexContext *context,
         const KeywordRecords *records, AnswerEntry *answer)
 {
     const KeywordArray *p;
@@ -213,14 +213,14 @@ int keyword_index_adds(KeywordIndexContext *context,
 
     end = records->rows + records->count;
     for (p=records->rows; p<end; p++) {
-       if ((r=keyword_index_add(context, p, answer)) != 0) {
+       if ((r=question_index_add(context, p, answer)) != 0) {
            result = r;
        }
     }
     return result;
 }
 
-int keyword_index_find(KeywordIndexContext *context,
+int question_index_find(KeywordIndexContext *context,
         const KeywordArray *keywords, QAEntry *qa)
 {
     int result;

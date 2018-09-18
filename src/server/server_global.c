@@ -12,7 +12,7 @@
 #include "fastcommon/logger.h"
 #include "sf/sf_global.h"
 #include "sf/sf_service.h"
-#include "keyword_index.h"
+#include "question_index.h"
 #include "qa_loader.h"
 #include "question_search.h"
 #include "server_global.h"
@@ -22,9 +22,9 @@ KEngineGlobalVariables g_server_vars;
 #define KNOWLEDGE_BASE_FILE_EXT_STR ".ken"
 #define KNOWLEDGE_BASE_FILE_EXT_LEN (sizeof(KNOWLEDGE_BASE_FILE_EXT_STR) - 1)
 
-static int kengine_load_kbase()
+static int kengine_load_kbase(int *total_file_count)
 {
-#define FILE_COUNT_ONCE 10
+#define FILE_COUNT_ONCE 1  //TODO
 
     struct dirent *dirp;
     DIR  *dp;
@@ -35,6 +35,7 @@ static int kengine_load_kbase()
     int file_len;
     int file_count;
 
+    *total_file_count = 0;
     if ((dp=opendir(g_server_vars.data_path)) == NULL) {
         return errno != 0 ? errno : EIO;
     }
@@ -69,6 +70,7 @@ static int kengine_load_kbase()
             if ((result=qa_loader_init(filenames, file_count)) != 0) {
                 break;
             }
+            *total_file_count += file_count;
         }
         if (file_count < FILE_COUNT_ONCE) {
             break;
@@ -78,7 +80,7 @@ static int kengine_load_kbase()
     return result;
 }
 
-static int kengine_load_data()
+static int kengine_load_data(int *total_file_count)
 {
     char similars_filename[MAX_PATH_SIZE];
     char *similars_buff;
@@ -96,7 +98,7 @@ static int kengine_load_data()
 
     similars.lines = split(similars_buff, '\n', 0, &similars.count);
     init_combination_index_arrays();
-    if ((result=keyword_index_init(&g_server_vars.ki_context,
+    if ((result=question_index_init(&g_server_vars.ki_context,
                     g_server_vars.question_index_hashtable_buckets)) != 0)
     {
         return result;
@@ -108,7 +110,7 @@ static int kengine_load_data()
         return result;
     }
 
-    return kengine_load_kbase();
+    return kengine_load_kbase(total_file_count);
 }
 
 int kengine_load_config_and_data(const char *filename)
@@ -117,6 +119,7 @@ int kengine_load_config_and_data(const char *filename)
     char *data_path;
     char config_str[256];
     int result;
+    int total_file_count;
 
     memset(&ini_context, 0, sizeof(IniContext));
     if ((result=iniLoadFromFile(filename, &ini_context)) != 0) {
@@ -164,12 +167,13 @@ int kengine_load_config_and_data(const char *filename)
 
     iniFreeContext(&ini_context);
 
+    result = kengine_load_data(&total_file_count);
+
     sprintf(config_str, "data_path=%s, question_index_hashtable_buckets=%d, "
-            "keyword_trie_top_hashtable_buckets=%d",
+            "keyword_trie_top_hashtable_buckets=%d, kbase file count: %d",
             g_server_vars.data_path, g_server_vars.question_index_hashtable_buckets,
-            g_server_vars.keyword_trie_top_hashtable_buckets);
+            g_server_vars.keyword_trie_top_hashtable_buckets, total_file_count);
     sf_log_config_ex(config_str);
 
-    return kengine_load_data();
+    return result;
 }
-

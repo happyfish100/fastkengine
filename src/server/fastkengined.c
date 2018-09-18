@@ -23,7 +23,7 @@
 #include "sf/sf_service.h"
 #include "sf/sf_util.h"
 #include "wordsegment.h"
-#include "keyword_index.h"
+#include "question_index.h"
 #include "server_global.h"
 #include "qa_reader.h"
 #include "qa_loader.h"
@@ -84,9 +84,7 @@ int main(int argc, char *argv[])
     gofailif(r,"");
 
 
-    //r = test_similar_words();
     r = test_segment();
-    return r;
 
     r = sf_startup_schedule(&schedule_tid);
     gofailif(r,"");
@@ -165,88 +163,12 @@ static int setup_server_env(const char *config_filename)
 
 static int test_segment()
 {
-    char *keywords_buff;
-    char *similars_buff;
-    int64_t file_size;
     int result;
-    int row_count;
-    int remain_count;
     int i;
-    char **rows;
-    KeywordArray keywords;
-    SimilarKeywordsInput similars;
-    QAReaderContext reader;
     string_t question;
     key_value_pair_t kv_pairs[MAX_CONDITION_COUNT];
     AnswerConditionArray conditions;
     QASearchResultArray results;
-    int index;
-    char *filenames[10];
-    int file_count = 0;
-
-    const char *keywords_filename = "/Users/yuqing/Devel/fastkengine/conf/keywords.txt";
-    const char *similars_filename = "/Users/yuqing/Devel/fastkengine/conf/similars.txt";
-
-    if ((result=getFileContent(keywords_filename, &keywords_buff, &file_size)) != 0) {
-        return result;
-    }
-
-    rows = split(keywords_buff, '\n', 0, &row_count);
-    if ((result=getFileContent(similars_filename, &similars_buff, &file_size)) != 0) {
-        return result;
-    }
-
-    similars.lines = split(similars_buff, '\n', 0, &similars.count);
-
-    init_combination_index_arrays();
-    keyword_index_init(&g_server_vars.ki_context, 1024 * 1024);
-
-    result = keyword_hashtable_init(&g_server_vars.kh_context, 10240, &similars);
-    if (result != 0) {
-        return result;
-    }
-    remain_count = row_count - 1;
-    index = 0;
-    while (remain_count > 0) {
-        keywords.count = remain_count > MAX_KEYWORDS_COUNT ?
-            MAX_KEYWORDS_COUNT : remain_count;
-        remain_count -= keywords.count;
-        for (i=0; i<keywords.count; i++) {
-            FC_SET_STRING(keywords.keywords[i], rows[index]);
-            index++;
-        }
-        result = keyword_hashtable_add_keywords(&g_server_vars.kh_context, &keywords);
-        if (result != 0) {
-            return result;
-        }
-    }
-
-    filenames[file_count++] = "../../conf/unix/file.ken";
-    result = qa_loader_init(filenames, file_count);
-
-    if (0) {
-        FastBuffer buffer;
-        if ((result=fast_buffer_init_ex(&buffer, 4096)) != 0) {
-            return result;
-        }
-
-        result = qa_reader_init(&reader, &g_server_vars.kh_context.string_allocator,
-                &buffer, "");
-        if (result != 0) {
-            return result;
-        }
-
-        while (1) {
-            QAReaderEntry entry;
-            if (qa_reader_next(&reader, &entry) != 0) {
-                break;
-            }
-        }
-        fast_buffer_destroy(&buffer);
-    }
-
-    index = (int)((int64_t)rand() * (row_count - 1) / (int64_t)RAND_MAX);
-    question = keywords.keywords[index];
 
     question.str = "查 找 文 件 列  表";
     question.str = "生成 core-dump";
@@ -255,7 +177,6 @@ static int test_segment()
     //question.str = "中华 人民 共和国 中华 万岁";
     question.len = strlen(question.str);
 
-    logInfo("row_count: %d, index: %d, %.*s", row_count, index, question.len, question.str);
     conditions.kv_pairs = kv_pairs;
     FC_SET_STRING(conditions.kv_pairs[0].key, "uname");
     FC_SET_STRING(conditions.kv_pairs[0].value, "Linux");
@@ -271,7 +192,5 @@ static int test_segment()
         printf("answer[%d] END ###########\n\n", i + 1);
     }
 
-    freeSplit(rows);
-    sleep(60);
     return result;
 }

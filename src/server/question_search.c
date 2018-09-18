@@ -138,13 +138,13 @@ static int search_keywords(const KeywordArray *keywords, QAArray *results)
     int key_len;
 
     if (results->count == MAX_ANSWER_COUNT) {
-        key_len = keyword_index_key_length(keywords);
+        key_len = question_index_key_length(keywords);
         if (key_len < results->entries[0].question->q.len) {
             return EOVERFLOW;
         }
     }
 
-    if ((result=keyword_index_find(&g_server_vars.ki_context,
+    if ((result=question_index_find(&g_server_vars.ki_context,
                     keywords, &qa)) == 0)
     {
         results->matched_count++;

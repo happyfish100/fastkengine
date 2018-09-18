@@ -8,7 +8,7 @@
 #include "fastcommon/ioevent.h"
 #include "keyword_hashtable.h"
 #include "wordsegment.h"
-#include "keyword_index.h"
+#include "question_index.h"
 
 typedef struct kengine_global_variables {
     KeywordHashtableContext kh_context;

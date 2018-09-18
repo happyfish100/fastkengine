@@ -47,6 +47,10 @@ FastKEngine is a knowledge engine based keywords matching.
         I.  minus sign (-) between multi words, such as core-dump, out-of-memory
         II. quoted with round brackets, such as (core dump), (out of memory）
       eg. "core-dump" matchs "core dump", "coredump" and "core-dump", but NOT match "dump core".
+
+    * config file similars.txt for similar keywords which split by space or tab, such as:
+      set setting config configure configuration
+      OOM (out of memory) (out memory)
 ```
 
 * Example
@@ -207,10 +211,4 @@ FastKEngine is a knowledge engine based keywords matching.
 位置 地方 哪儿 哪里 那儿 那里 position  location place
 设置 设定 配置 set setting config configure configuration
 删除 移除 delete remove
-```
-
-* 重要提示
-
-```
-  question中的关键字如果存在多个近义词，使用近义词列表的第一列（第一个词）。
 ```

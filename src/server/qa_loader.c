@@ -83,7 +83,7 @@ static void keywords_to_similar(KeywordArray *karray)
             continue;
         }
 
-        /* MUST to copy members for persistent in keyword_index hashtable */
+        /* MUST to copy members for persistent in question_index hashtable */
         *p = *similar;
     }
 }
@@ -113,7 +113,7 @@ static int load_question_answers(QAReaderContext *reader)
         keyword_records_normalize(&entry.questions);
         keyword_records_unique(&entry.questions);
 
-        if ((result=keyword_index_adds(&g_server_vars.ki_context,
+        if ((result=question_index_adds(&g_server_vars.ki_context,
             &entry.questions, &entry.answer)) != 0)
         {
             break;
@@ -128,8 +128,8 @@ int qa_loader_init(char **filenames, const int count)
     int result;
     QAReaderContext reader;
     FastBuffer buffer;
-    const char **pp;
-    const char **end;
+    char **pp;
+    char **end;
 
     if ((result=fast_buffer_init_ex(&buffer, 4096)) != 0) {
         return result;
