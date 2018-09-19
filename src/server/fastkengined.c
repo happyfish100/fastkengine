@@ -28,8 +28,8 @@
 #include "qa_reader.h"
 #include "qa_loader.h"
 #include "question_search.h"
-//#include "common/fcfg_proto.h"
-//#include "common/fcfg_types.h"
+#include "common/fken_proto.h"
+#include "server_handler.h"
 
 static bool daemon_mode = true;
 static int setup_server_env(const char *config_filename);
@@ -94,20 +94,16 @@ int main(int argc, char *argv[])
     r = write_to_pid_file(g_pid_filename);
     gofailif(r, "write pid error");
 
-    /*
-    r = fcfg_server_handler_init();
+    r = server_handler_init();
     gofailif(r,"server handler init error");
 
-    fcfg_proto_init();
+    fken_proto_init();
 
-    r = sf_service_init(fcfg_server_alloc_thread_extra_data,
-            fcfg_server_thread_loop,
-            NULL, fcfg_proto_set_body_length, fcfg_server_deal_task,
-            fcfg_server_task_finish_cleanup, fcfg_server_recv_timeout_callback,
-            100, sizeof(FCFGProtoHeader), sizeof(FCFGServerTaskArg));
+    r = sf_service_init(NULL, NULL, NULL, fken_proto_set_body_length,
+            fken_server_deal_task, sf_task_finish_clean_up, NULL,
+            100, sizeof(FKENProtoHeader), 0);
     gofailif(r,"service init error");
     sf_set_remove_from_ready_list(false);
-    */
 
     sf_accept_loop();
     if (g_schedule_flag) {

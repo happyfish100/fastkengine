@@ -7,7 +7,8 @@ TARGET_PATH = /usr/bin
 CONFIG_PATH = $(TARGET_CONF_PATH)
 
 ALL_OBJS = wordsegment.o keyword_hashtable.o keyword_iterator.o server_global.o \
-           question_index.o question_search.o qa_reader.o qa_loader.o
+           question_index.o question_search.o qa_reader.o qa_loader.o server_handler.o \
+           ../common/fken_proto.o
 
 ALL_PRGS = fastkengined
 
