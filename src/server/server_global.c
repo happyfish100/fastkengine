@@ -129,8 +129,8 @@ int kengine_load_config_and_data(const char *filename)
     }
 
     if ((result=sf_load_config("fast_kengined", filename, &ini_context,
-                    KENGINE_DEFAULT_INNER_PORT,
-                    KENGINE_DEFAULT_OUTER_PORT)) != 0)
+                    FKEN_SERVER_DEFAULT_INNER_PORT,
+                    FKEN_SERVER_DEFAULT_OUTER_PORT)) != 0)
     {
         return result;
     }

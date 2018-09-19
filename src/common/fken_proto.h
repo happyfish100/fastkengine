@@ -8,6 +8,9 @@
 #include "fastcommon/ini_file_reader.h"
 #include "fken_types.h"
 
+#define FKEN_SERVER_DEFAULT_INNER_PORT   10000
+#define FKEN_SERVER_DEFAULT_OUTER_PORT   10000
+
 #define FKEN_PROTO_ACK                    6
 
 #define FKEN_PROTO_ACTIVE_TEST_REQ       35
