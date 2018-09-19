@@ -23,6 +23,7 @@
 #include "sf/sf_global.h"
 #include "common/fken_proto.h"
 #include "server_global.h"
+#include "question_search.h"
 #include "server_handler.h"
 
 int server_handler_init()
@@ -32,6 +33,158 @@ int server_handler_init()
 
 int server_handler_destroy()
 {   
+    return 0;
+}
+
+static int parse_answer_conditions(struct fast_task_info *task,
+        const FKENRequestInfo *request, FKENResponseInfo *response,
+        const int kv_count, string_t *question,
+        AnswerConditionArray *conditions)
+{
+    int i;
+    int current_body_len;
+    char *p;
+    FKENProtoQuestionSearchKVEntry *kv_entry;
+    key_value_pair_t *kv_pair;
+
+    p = question->str + question->len;
+    current_body_len = p - (task->data + sizeof(FKENProtoHeader));
+    kv_pair = conditions->kv_pairs;
+    for (i=0; i<kv_count; i++) {
+        current_body_len += sizeof(FKENProtoQuestionSearchKVEntry);
+        if (request->body_len < current_body_len) {
+            response->error.length = sprintf(response->error.message,
+                    "request body length: %d < %d",
+                    request->body_len, current_body_len);
+            return EINVAL;
+        }
+
+        kv_entry = (FKENProtoQuestionSearchKVEntry *)p;
+        kv_pair->key.len = kv_entry->key_len;
+        kv_pair->value.len = kv_entry->value_len;
+        if (kv_pair->key.len == 0) {
+            response->error.length = sprintf(response->error.message,
+                    "invalid key length: %d", kv_pair->key.len);
+            return EINVAL;
+        }
+
+        current_body_len += kv_pair->key.len + kv_pair->value.len;
+        if (request->body_len < current_body_len) {
+            response->error.length = sprintf(response->error.message,
+                    "request body length: %d < %d",
+                    request->body_len, current_body_len);
+            return EINVAL;
+        }
+        kv_pair->key.str = kv_entry->key;
+        kv_pair->value.str = kv_pair->key.str + kv_pair->key.len;
+
+        kv_pair++;
+    }
+
+    if (request->body_len != current_body_len) {
+        response->error.length = sprintf(response->error.message,
+                "request body length: %d != %d",
+                request->body_len, current_body_len);
+        return EINVAL;
+    }
+    conditions->count = kv_count;
+    return 0;
+}
+
+static int output_answers(struct fast_task_info *task,
+        FKENResponseInfo *response, QASearchResultArray *results)
+{
+    FKENProtoQuestionSearchRespHeader *resp_header;
+    QASearchResultEntry *entry;
+    QASearchResultEntry *end;
+    FKENProtoAnswerEntry *answer_entry;
+    char *p;
+    int result;
+    int expect_size;
+
+    resp_header = (FKENProtoQuestionSearchRespHeader *)(task->data +
+            sizeof(FKENProtoHeader));
+    resp_header->answer_count = results->count;
+
+    response->body_len = sizeof(FKENProtoQuestionSearchRespHeader);
+    end = results->entries + results->count;
+    for (entry=results->entries; entry<end; entry++) {
+        response->body_len += sizeof(FKENProtoAnswerEntry) + entry->answer->len;
+    }
+
+    expect_size = sizeof(FKENProtoHeader) + response->body_len;
+    if (expect_size > task->size) {
+        if ((result=free_queue_set_buffer_size(task, expect_size)) != 0) {
+            response->error.length = sprintf(response->error.message,
+                    "free_queue_set_buffer_size to %d fail", expect_size);
+            return result;
+        }
+    }
+
+    p = (char *)resp_header + sizeof(FKENProtoQuestionSearchRespHeader);
+    for (entry=results->entries; entry<end; entry++) {
+        answer_entry = (FKENProtoAnswerEntry *)p;
+
+        short2buff(entry->answer->len, answer_entry->answer_len);
+        p += sizeof(FKENProtoAnswerEntry);
+        memcpy(answer_entry->answer, entry->answer->str, entry->answer->len);
+        p += entry->answer->len;
+    }
+
+    return 0;
+}
+
+static int fken_proto_deal_question_search(struct fast_task_info *task,
+        const FKENRequestInfo *request, FKENResponseInfo *response)
+{
+    int result;
+    FKENProtoQuestionSearchReqHeader *req_header;
+    key_value_pair_t kv_pairs[MAX_CONDITION_COUNT];
+    AnswerConditionArray conditions;
+    QASearchResultArray results;
+    string_t question;
+    int kv_count;
+
+    if ((result=FKEN_PROTO_CHECK_MIN_BODY_LEN(task, request, response,
+                    sizeof(FKENProtoQuestionSearchReqHeader))) != 0)
+    {
+        return result;
+    }
+
+    req_header = (FKENProtoQuestionSearchReqHeader *)(task->data +
+            sizeof(FKENProtoHeader));
+    kv_count = req_header->kv_count;
+    question.len = req_header->question_len;
+
+    if (kv_count < 0 || kv_count > MAX_CONDITION_COUNT) {
+        response->error.length = sprintf(response->error.message,
+                "invalid key-value count: %d", kv_count);
+        return EINVAL;
+    }
+    if (question.len <= 0) {
+        response->error.length = sprintf(response->error.message,
+                "invalid question length: %d", question.len);
+        return EINVAL;
+    }
+    question.str = req_header->question;
+
+    conditions.kv_pairs = kv_pairs;
+    if ((result=parse_answer_conditions(task, request, response,
+                    kv_count, &question, &conditions)) != 0)
+    {
+        return result;
+    }
+
+    if ((result=question_search(&question, &conditions, &results)) != 0) {
+        return result;
+    }
+
+    if ((result=output_answers(task, response, &results)) != 0) {
+        return result;
+    }
+
+    response->response_done = true;
+    response->cmd = FKEN_PROTO_QUESTION_SEARCH_RESP;
     return 0;
 }
 
@@ -60,6 +213,8 @@ int fken_server_deal_task(struct fast_task_info *task)
             response.cmd = FKEN_PROTO_ACTIVE_TEST_RESP;
             result = fken_proto_deal_actvie_test(task, &request, &response);
             break;
+        case FKEN_PROTO_QUESTION_SEARCH_REQ:
+            result = fken_proto_deal_question_search(task, &request, &response);
         default:
             response.error.length = sprintf(response.error.message,
                     "unkown cmd: %d", request.cmd);

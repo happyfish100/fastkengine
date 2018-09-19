@@ -691,7 +691,6 @@ static int qa_reader_parse_question(QAReaderContext *context,
 {
     char *p;
     char *end;
-    int result;
     string_t line;
     KeywordRecords records;
     int copy_count;
@@ -717,7 +716,7 @@ static int qa_reader_parse_question(QAReaderContext *context,
 
         logInfo("lines==== %.*s", FC_PRINTF_STAR_STRING_PARAMS(line));
 
-        result = parse_a_question(context, &line, &records);
+        parse_a_question(context, &line, &records);
         if (entry->questions.count + records.count > MAX_KEYWORDS_ROWS) {
             logWarning("file: "__FILE__", line: %d, "
                     "keyword rows exceeds %d",

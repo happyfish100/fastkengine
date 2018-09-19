@@ -35,7 +35,6 @@ static int kengine_load_kbase(int *total_file_count)
     int file_len;
     int file_count;
 
-    *total_file_count = 0;
     if ((dp=opendir(g_server_vars.data_path)) == NULL) {
         return errno != 0 ? errno : EIO;
     }
@@ -119,7 +118,7 @@ int kengine_load_config_and_data(const char *filename)
     char *data_path;
     char config_str[256];
     int result;
-    int total_file_count;
+    int total_file_count = 0;
 
     memset(&ini_context, 0, sizeof(IniContext));
     if ((result=iniLoadFromFile(filename, &ini_context)) != 0) {

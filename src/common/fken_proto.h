@@ -30,15 +30,20 @@ typedef struct fken_proto_question_kv_entry {
     /* char *value;    //value = key + key_len  */
 } FKENProtoQuestionSearchKVEntry;
 
-typedef struct fken_proto_question_search_req {
+typedef struct fken_proto_question_search_req_header {
     unsigned char kv_count;
     unsigned char question_len;
     char question[0];
-} FKENProtoQuestionSearchReq;
+} FKENProtoQuestionSearchReqHeader;
 
-typedef struct fken_proto_get_env_resp {
+typedef struct fken_proto_answer_entry {
+    char answer_len[2];
+    char answer[0];
+} FKENProtoAnswerEntry;
+
+typedef struct fken_proto_question_search_resp_header {
     unsigned char answer_count;
-} FKENProtoQuestionSearchResp;
+} FKENProtoQuestionSearchRespHeader;
 
 #ifdef __cplusplus
 extern "C" {
