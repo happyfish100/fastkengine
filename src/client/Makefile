@@ -5,12 +5,17 @@ INC_PATH = -I/usr/include -I/usr/local/include -I..
 LIB_PATH =  -lfastcommon 
 TARGET_LIB = /usr/local/lib
 
-ALL_HEADERS = ../common/fken_proto.h fken_client.h
+ALL_HEADERS = ../common/fken_types.h ../common/fken_proto.h fken_client.h
+
+SHARED_OBJS = ../common/fken_proto.lo fken_client.lo
+
+ALL_OBJS = $(SHARED_OBJS)
+
 ALL_LIBS = libfkenclient.so
 
-all: $(ALL_LIBS)
+all: $(ALL_OBJS) $(ALL_LIBS) fken_test
 
-libfkenclient.so: ../common/fken_proto.lo fken_client.lo
+libfkenclient.so: $(SHARED_OBJS)
 	cc -shared -o $@ $^ $(LIB_PATH)
 
 .lo:

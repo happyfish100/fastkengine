@@ -8,12 +8,10 @@
 #include <string.h>
 #include <time.h>
 #include "fastcommon/common_define.h"
+#include "common/fken_types.h"
 
 #define MAX_KEYWORDS_COUNT    5
 #define MAX_KEYWORDS_ROWS    (4 * MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
-
-#define MAX_ANSWER_COUNT      5
-#define MAX_CONDITION_COUNT   5
 
 typedef struct keyword_array {
     string_t keywords[MAX_KEYWORDS_COUNT];
@@ -56,7 +54,7 @@ typedef struct question_answer_entry {
 } QAEntry;
 
 typedef struct question_answer_array {
-    QAEntry entries[MAX_ANSWER_COUNT];
+    QAEntry entries[FKEN_MAX_ANSWER_COUNT];
     int count;    //entry count
     int matched_count;
 } QAArray;
@@ -68,7 +66,7 @@ typedef struct qa_search_result_entry {
 } QASearchResultEntry;
 
 typedef struct qa_search_result_array {
-    QASearchResultEntry entries[MAX_ANSWER_COUNT];
+    QASearchResultEntry entries[FKEN_MAX_ANSWER_COUNT];
     int count;    //entry count
     int scan_count;
     int matched_count;

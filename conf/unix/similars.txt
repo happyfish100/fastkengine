@@ -1,7 +1,7 @@
 文件 文档 file
 目录 directory dir
 时间 日期 time date datetime
-显示 展示 show
+显示 展示 查看 show
 查找 找出 找到 find
 列举 列出 排列 列表 list
 降序 倒序 倒排 descending descend desc

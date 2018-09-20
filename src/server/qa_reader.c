@@ -12,7 +12,7 @@
 #include "server_global.h"
 #include "qa_reader.h"
 
-#define QA_TAG_MAX_ATTRIBUTES   MAX_CONDITION_COUNT
+#define QA_TAG_MAX_ATTRIBUTES   FKEN_MAX_CONDITION_COUNT
 #define QA_SHOW_CONTENT_SIZE    256
 #define QA_MAX_ANSWER_ENTRIES   64
 

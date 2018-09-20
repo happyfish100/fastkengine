@@ -4,6 +4,12 @@
 #include <time.h>
 #include "fastcommon/common_define.h"
 
+#define FKEN_MAX_ANSWER_COUNT      5
+#define FKEN_MAX_CONDITION_COUNT   5
+
+#define FKEN_SERVER_DEFAULT_INNER_PORT   10000
+#define FKEN_SERVER_DEFAULT_OUTER_PORT   10000
+
 #define FKEN_ERROR_INFO_SIZE         256
 
 typedef struct {

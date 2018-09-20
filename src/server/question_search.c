@@ -109,7 +109,7 @@ static bool add_answer(QAArray *results, const QAEntry *qa)
 
     if (results->count == 0) {
         results->entries[results->count++] = *qa;
-    } else if (results->count < MAX_ANSWER_COUNT) {
+    } else if (results->count < FKEN_MAX_ANSWER_COUNT) {
         for (i=0; i<results->count; i++) {
             if (results->entries[i].answer->id == qa->answer->id) {
                 break;
@@ -137,7 +137,7 @@ static int search_keywords(const KeywordArray *keywords, QAArray *results)
     int result;
     int key_len;
 
-    if (results->count == MAX_ANSWER_COUNT) {
+    if (results->count == FKEN_MAX_ANSWER_COUNT) {
         key_len = question_index_key_length(keywords);
         if (key_len < results->entries[0].question->q.len) {
             return EOVERFLOW;

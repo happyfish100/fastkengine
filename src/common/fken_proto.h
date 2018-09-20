@@ -8,9 +8,6 @@
 #include "fastcommon/ini_file_reader.h"
 #include "fken_types.h"
 
-#define FKEN_SERVER_DEFAULT_INNER_PORT   10000
-#define FKEN_SERVER_DEFAULT_OUTER_PORT   10000
-
 #define FKEN_PROTO_ACK                    6
 
 #define FKEN_PROTO_ACTIVE_TEST_REQ       35
@@ -59,23 +56,21 @@ int fken_proto_set_body_length(struct fast_task_info *task);
 int fken_proto_deal_actvie_test(struct fast_task_info *task,
         const FKENRequestInfo *request, FKENResponseInfo *response);
 
-int send_and_recv_response_header(ConnectionInfo *conn, char *data, int len,
-        FKENResponseInfo *response, int network_timeout);
+int send_and_recv_response_header(ConnectionInfo *conn, char *data,
+        const int len, const int network_timeout, FKENProtoHeader *header);
 
-void fken_proto_response_extract (FKENProtoHeader *header_pro,
-        FKENResponseInfo *response);
+int fken_send_active_test(ConnectionInfo *conn, const int network_timeout,
+        char *error_info, const int error_size);
 
-int fken_send_active_test(ConnectionInfo *conn, FKENResponseInfo *response,
-        int network_timeout);
-
-int fken_check_response(ConnectionInfo *conn,
-        FKENResponseInfo *response, int network_timeout,
-        unsigned char resp_cmd);
+int fken_check_response(ConnectionInfo *conn, FKENProtoHeader *resp_header,
+        int network_timeout, unsigned char resp_cmd, int *body_len,
+        char *error_info, const int error_size);
 
 static inline void fken_set_header(FKENProtoHeader *header,
         unsigned char cmd, int body_len)
 {
     header->cmd = cmd;
+    header->status = 0;
     int2buff(body_len, header->body_len);
 }
 

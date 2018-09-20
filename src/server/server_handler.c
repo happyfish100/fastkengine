@@ -139,7 +139,7 @@ static int fken_proto_deal_question_search(struct fast_task_info *task,
 {
     int result;
     FKENProtoQuestionSearchReqHeader *req_header;
-    key_value_pair_t kv_pairs[MAX_CONDITION_COUNT];
+    key_value_pair_t kv_pairs[FKEN_MAX_CONDITION_COUNT];
     AnswerConditionArray conditions;
     QASearchResultArray results;
     string_t question;
@@ -156,7 +156,7 @@ static int fken_proto_deal_question_search(struct fast_task_info *task,
     kv_count = req_header->kv_count;
     question.len = req_header->question_len;
 
-    if (kv_count < 0 || kv_count > MAX_CONDITION_COUNT) {
+    if (kv_count < 0 || kv_count > FKEN_MAX_CONDITION_COUNT) {
         response->error.length = sprintf(response->error.message,
                 "invalid key-value count: %d", kv_count);
         return EINVAL;
@@ -195,10 +195,11 @@ int fken_server_deal_task(struct fast_task_info *task)
     FKENResponseInfo response;
     int result;
     int r;
-    int64_t tbegin;
     int time_used;
+    char buff[16];
+    int64_t tbegin;
 
-    tbegin = get_current_time_ms();
+    tbegin = get_current_time_us();
     response.cmd = FKEN_PROTO_ACK;
     response.body_len = 0;
     response.log_error = true;
@@ -215,6 +216,7 @@ int fken_server_deal_task(struct fast_task_info *task)
             break;
         case FKEN_PROTO_QUESTION_SEARCH_REQ:
             result = fken_proto_deal_question_search(task, &request, &response);
+            break;
         default:
             response.error.length = sprintf(response.error.message,
                     "unkown cmd: %d", request.cmd);
@@ -244,20 +246,20 @@ int fken_server_deal_task(struct fast_task_info *task)
     task->length = sizeof(FKENProtoHeader) + response.body_len;
 
     r = sf_send_add_event(task);
-    time_used = (int)(get_current_time_ms() - tbegin);
-    if (time_used > 1000) {
-        lwarning("timed used to process a request is %d ms, "
+    time_used = (int)(get_current_time_us() - tbegin);
+    if (time_used > 100) {
+        lwarning("timed used to process a request is %s us, "
                 "cmd: %d, req body len: %d, resp body len: %d",
-                time_used, request.cmd,
+                int_to_comma_str(time_used, buff), request.cmd,
                 request.body_len, response.body_len);
     }
 
     ldebug("client ip: %s, req cmd: %d, req body_len: %d, "
             "resp cmd: %d, status: %d, resp body_len: %d, "
-            "time used: %d ms",  task->client_ip,
+            "time used: %s us",  task->client_ip,
             request.cmd, request.body_len,
             response.cmd, proto_header->status,
-            response.body_len, time_used);
+            response.body_len, int_to_comma_str(time_used, buff));
 
     return r == 0 ? result : r;
 }

@@ -162,7 +162,7 @@ static int test_segment()
     int result;
     int i;
     string_t question;
-    key_value_pair_t kv_pairs[MAX_CONDITION_COUNT];
+    key_value_pair_t kv_pairs[FKEN_MAX_CONDITION_COUNT];
     AnswerConditionArray conditions;
     QASearchResultArray results;
 
