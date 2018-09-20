@@ -37,6 +37,7 @@ typedef struct fken_proto_question_search_req_header {
 } FKENProtoQuestionSearchReqHeader;
 
 typedef struct fken_proto_answer_entry {
+    char id[8];
     char answer_len[2];
     char answer[0];
 } FKENProtoAnswerEntry;

@@ -194,7 +194,7 @@ static int question_search_req_pack(FKenClient *client,
 }
 
 static int question_search_resp_unpack(FKenClient *client,
-        const int body_len, string_t *answers, int *answer_count)
+        const int body_len, FKenAnswerArray *answer_array)
 {
     FKENProtoQuestionSearchRespHeader *result_header;
     FKENProtoAnswerEntry *proto_entry;
@@ -221,8 +221,9 @@ static int question_search_resp_unpack(FKenClient *client,
             return EINVAL;
         }
 
-        answers[i].str = proto_entry->answer;
-        answers[i].len = answer_len;
+        answer_array->answers[i].id = buff2long(proto_entry->id);
+        answer_array->answers[i].answer.str = proto_entry->answer;
+        answer_array->answers[i].answer.len = answer_len;
         p += sizeof(FKENProtoAnswerEntry) + answer_len;
         if ((int)(p - client->buff) > body_len) {
             logError("file: "__FILE__", line: %d, "
@@ -241,13 +242,13 @@ static int question_search_resp_unpack(FKenClient *client,
         return EINVAL;
     }
 
-    *answer_count = result_header->answer_count;
+    answer_array->count = result_header->answer_count;
     return 0;
 }
 
 int fken_client_question_search(FKenClient *client, const string_t *question,
     const key_value_pair_t *conditions, const int condition_count,
-    string_t *answers, int *answer_count)
+    FKenAnswerArray *answer_array)
 {
 	int result;
     int req_len;
@@ -305,8 +306,7 @@ int fken_client_question_search(FKenClient *client, const string_t *question,
             break;
         }
 
-        result = question_search_resp_unpack(client, body_len,
-                answers, answer_count);
+        result = question_search_resp_unpack(client, body_len, answer_array);
     } while (0);
 
     if (result != 0) {

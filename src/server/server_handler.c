@@ -124,10 +124,11 @@ static int output_answers(struct fast_task_info *task,
     p = (char *)resp_header + sizeof(FKENProtoQuestionSearchRespHeader);
     for (entry=results->entries; entry<end; entry++) {
         answer_entry = (FKENProtoAnswerEntry *)p;
-
+        long2buff(entry->id, answer_entry->id);
         short2buff(entry->answer->len, answer_entry->answer_len);
         p += sizeof(FKENProtoAnswerEntry);
         memcpy(answer_entry->answer, entry->answer->str, entry->answer->len);
+
         p += entry->answer->len;
     }
 
