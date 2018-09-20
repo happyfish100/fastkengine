@@ -176,7 +176,9 @@ static int fken_proto_deal_question_search(struct fast_task_info *task,
     }
 
     if ((result=question_search(&question, &conditions, &results)) != 0) {
-        return result;
+        if (result != ENOENT) {
+            return result;
+        }
     }
 
     if ((result=output_answers(task, response, &results)) != 0) {

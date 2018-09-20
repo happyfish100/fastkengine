@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
                     conditions, condition_count,
                     answers, &answer_count)) != 0)
     {
+        printf("result: %d\n", result);
         return result;
     }
 
