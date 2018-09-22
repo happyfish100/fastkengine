@@ -1,7 +1,7 @@
 .SUFFIXES: .c .lo
 
 COMPILE = $(CC)  -Wall -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -g -O1 -DDEBUG_FLAG -fPIC
-INC_PATH = -I/usr/include -I/usr/local/include -I..
+INC_PATH = -I/usr/include -I/usr/local/include -I../common
 LIB_PATH =  -lfastcommon 
 TARGET_LIB = /usr/local/lib
 

@@ -2,7 +2,7 @@
 #define _FKEN_CLIENT_H_
 
 #include "fastcommon/connection_pool.h"
-#include "common/fken_types.h"
+#include "fken_types.h"
 
 #define FKEN_DEFAULT_NETWORK_BUFFER_SIZE   (16 * 1024)
 

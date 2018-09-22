@@ -1,0 +1,18 @@
+ngx_addon_name=ngx_http_fastken_module
+
+if test -n "${ngx_module_link}"; then
+    ngx_module_type=HTTP
+    ngx_module_name=$ngx_addon_name
+    ngx_module_incs="/usr/local/include"
+    ngx_module_libs="-lfastcommon -lfkenclient"
+    ngx_module_srcs="$ngx_addon_dir/ngx_http_fastken_module.c"
+    ngx_module_deps=
+    CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64 -DCLIENT_CONF_FILENAME='\"/etc/fken/client.conf\"'"
+    . auto/module
+else
+    HTTP_MODULES="$HTTP_MODULES ngx_http_fastken_module"
+    NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_fastken_module.c"
+    CORE_INCS="$CORE_INCS /usr/local/include"
+    CORE_LIBS="$CORE_LIBS -lfastcommon -lfkenclient"
+    CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64 -DCLIENT_CONF_FILENAME='\"/etc/fken/client.conf\"'"
+fi

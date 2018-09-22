@@ -1,0 +1,33 @@
+Copy right 2018 Happy Fish / YuQing
+
+#step 1. first install the FastKEngine client library,
+         download address: https://github.com/happyfish100/fastkengine
+
+#step 2. install nginx server
+         FastKEngine nginx module test passed with nginx 1.15.3,
+         my nginx installed in /usr/local/nginx
+
+#step 3. download FastKEngine nginx module source package and unpack it, such as:
+cd /home/yuqing
+git clone https://github.com/happyfish100/fastkengine
+
+#step 4. enter the nginx source dir, compile and install the module, such as:
+cd nginx-1.15.3
+./configure --add-module=/home/yuqing/fastkengine/src/nginx-module/
+make; make install
+
+Notice: before compile, you can change CLIENT_CONF_FILENAME macro in the config file as:
+CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=64 -DCLIENT_CONF_FILENAME='\"/etc/fken/client.conf\"'" 
+
+#step 5. config the nginx config file such as nginx.conf, add the following lines:
+
+        location /fastken {
+            root /home/yuqing/fastkengine/data;
+            ngx_fastken_module;
+        }
+
+#step 6. change the config file /etc/fken/client.conf, more detail please see it
+
+#step 7. restart the nginx server, such as:
+/usr/local/nginx/sbin/nginx -s stop; /usr/local/nginx/sbin/nginx
+

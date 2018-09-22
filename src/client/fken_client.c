@@ -9,7 +9,7 @@
 #include "fastcommon/logger.h"
 #include "sf/sf_func.h"
 #include "sf/sf_util.h"
-#include "common/fken_proto.h"
+#include "fken_proto.h"
 #include "fken_client.h"
 
 static int client_load_from_conf_file(FKenClient *client, const char *filename)
