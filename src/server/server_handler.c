@@ -49,6 +49,7 @@ static int parse_answer_conditions(struct fast_task_info *task,
 
     p = question->str + question->len;
     current_body_len = p - (task->data + sizeof(FKENProtoHeader));
+
     kv_pair = conditions->kv_pairs;
     for (i=0; i<kv_count; i++) {
         current_body_len += sizeof(FKENProtoQuestionSearchKVEntry);
@@ -78,6 +79,7 @@ static int parse_answer_conditions(struct fast_task_info *task,
         kv_pair->key.str = kv_entry->key;
         kv_pair->value.str = kv_pair->key.str + kv_pair->key.len;
 
+        p = kv_pair->value.str + kv_pair->value.len;
         kv_pair++;
     }
 

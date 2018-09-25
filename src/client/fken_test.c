@@ -29,7 +29,11 @@ int main(int argc, char *argv[])
         return result;
     }
 
-    condition_count = 0;
+    FC_SET_STRING(conditions[0].key, "uname");
+    FC_SET_STRING(conditions[0].value, "Darwin");
+    FC_SET_STRING(conditions[1].key, "osname");
+    FC_SET_STRING(conditions[1].value, "FreeBSD");
+    condition_count = 2;
     if ((result=fken_client_question_search(&client, &question,
                     conditions, condition_count, &answer_array)) != 0)
     {

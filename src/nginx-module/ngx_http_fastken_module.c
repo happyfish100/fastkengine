@@ -4,7 +4,19 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include "fastcommon/logger.h"
+#include "fastcommon/shared_func.h"
 #include "fastken/fken_client.h"
+
+#define START_MARK_STR  "=[["
+#define END_MARK_STR    "]]"
+#define START_MARK_LEN  (sizeof(START_MARK_STR) - 1)
+#define END_MARK_LEN    (sizeof(END_MARK_STR) - 1)
+
+#define PARAM_NAME_QUESTION_STR  "question"
+#define PARAM_NAME_QUESTION_LEN  (sizeof(PARAM_NAME_QUESTION_STR) - 1)
+
+#define PARAM_NAME_CONDITIONS_STR  "conditions"
+#define PARAM_NAME_CONDITIONS_LEN  (sizeof(PARAM_NAME_CONDITIONS_STR) - 1)
 
 typedef struct {
 	ngx_http_upstream_conf_t   upstream;
@@ -13,6 +25,13 @@ typedef struct {
 } ngx_http_fastken_loc_conf_t;
 
 static FKenClient client;
+
+static string_t start_mark = {START_MARK_STR, START_MARK_LEN};
+static string_t end_mark = {END_MARK_STR, END_MARK_LEN};
+static string_t param_name_question = {PARAM_NAME_QUESTION_STR,
+    PARAM_NAME_QUESTION_LEN};
+static string_t param_name_conditions = {PARAM_NAME_CONDITIONS_STR,
+    PARAM_NAME_CONDITIONS_LEN};
 
 static char *ngx_http_fastken_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 //static ngx_int_t ngx_http_fastken_init(ngx_conf_t *cf);
@@ -104,13 +123,13 @@ static ngx_int_t fken_send_reply_chunk(ngx_http_request_t *r,
     return rc;
 }
 
-static ngx_int_t get_post_content(ngx_http_request_t *r, char * data_buf, int data_size)
+static ngx_int_t get_post_content(ngx_http_request_t *r, string_t *data,
+        const int data_size)
 {
-    size_t content_length;
+    int content_length;
     ngx_chain_t* bufs;
     ngx_buf_t* buf;
-    size_t body_length;
-    size_t bytes;
+    int bytes;
 
     content_length = r->headers_in.content_length_n;
     ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "[get_post_content] [content_length:%d]", content_length); //DEBUG
@@ -118,33 +137,132 @@ static ngx_int_t get_post_content(ngx_http_request_t *r, char * data_buf, int da
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "reqeust_body:null");
         return NGX_ERROR;
     }
-    if ((int)content_length >= data_size) {
+    if (content_length >= data_size) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                 "content_length: %d too large exceeds %d",
                 (int)content_length, data_size);
         return NGX_ERROR;
     }
 
-    body_length = 0;
+    data->len = 0;
     bufs = r->request_body->bufs;
     while (bufs != NULL) {
         buf = bufs->buf;
         bufs = bufs->next;
         bytes = buf->last - buf->pos;
-        if (body_length + bytes > content_length) {
-            bytes = content_length - body_length;
+        if (data->len + bytes > content_length) {
+            bytes = content_length - data->len;
         }
-        memcpy(data_buf + body_length, buf->pos, bytes);
-        body_length += bytes;
+        memcpy(data->str + data->len, buf->pos, bytes);
+        data->len += bytes;
     }
 
-    if(body_length != content_length) {
+    if (data->len != content_length) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                "get_post_content's body_length != content_length in headers");
+                "get_post_content's body_length: %d != "
+                "content_length: %d in headers", data->len, content_length);
         return NGX_ERROR;
     }
 
     return NGX_OK;
+}
+
+static char *find_end_string(char *str, const int len,
+        const string_t *smark, const string_t *emark)
+{
+    char *p;
+    char *end;
+    char *pe;
+    string_t sub;
+
+    end = str + len;
+    p = str;
+    while (p < end) {
+        if ((pe=strstr(p, emark->str)) == NULL) {
+            return NULL;
+        }
+
+        sub.str = p;
+        sub.len = pe - p;
+        if (fc_memmem(&sub, smark) == NULL) {
+            return pe;
+        }
+        p = pe + emark->len;
+    }
+
+    return NULL;
+}
+
+static int parse_params(string_t *content, key_value_pair_t *params,
+        const int max_count, int *param_count)
+{
+
+    char *p;
+    char *end;
+    char *closure;
+    char *equal;
+    key_value_pair_t *kv_param;
+
+    *param_count = 0;
+    if (content->len == 0) {
+        return 0;
+    }
+
+    end = content->str + content->len;
+    p = content->str;
+    while (p < end) {
+        while (p < end && (*p == ' ' || *p == '\t' || *p == '\r' || *p == '\n')) {
+            p++;
+        }
+        if (p == end) {
+            break;
+        }
+        if (*param_count >= max_count) {
+            logError("file: "__FILE__", line: %d, "
+                    "too many parameters, exceeds %d",
+                    __LINE__, max_count);
+            return ENOSPC;
+        }
+
+        kv_param = params + (*param_count);
+        kv_param->key.str = p;
+
+        equal = strstr(p, start_mark.str);
+        if (equal == NULL) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "no start mark: %s", __LINE__, start_mark.str);
+            return 0;
+        }
+
+        kv_param->key.len = equal - p;
+        p = equal + start_mark.len;
+        kv_param->value.str = p;
+
+        closure = find_end_string(p, end - p, &start_mark, &end_mark);
+        if (closure == NULL) {
+            logWarning("file: "__FILE__", line: %d, "
+                    "no end mark: %s", __LINE__, end_mark.str);
+            return 0;
+        }
+
+        kv_param->value.len = closure - p; 
+        p = closure + end_mark.len;
+        (*param_count)++;
+    }
+
+    return 0;
+}
+
+static string_t *get_param(key_value_pair_t *params,
+        const int param_count, const string_t *name)
+{
+    int i;
+    for (i=0; i<param_count; i++) {
+        if (fc_string_equal(&params[i].key, name)) {
+            return &params[i].value;
+        }
+    }
+    return NULL;
 }
 
 static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
@@ -153,21 +271,79 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
 #define CONTENT_TYPE_LEN  (sizeof(CONTENT_TYPE_STR) - 1)
 
     ngx_int_t rc;
+    key_value_pair_t params[FKEN_MAX_CONDITION_COUNT];
+    int param_count;
 	char content[16 * 1024];
-    char buff[1024];
+    string_t cont;
+    char *buff;
     int len;
+    string_t *question;
+    string_t *cond;
+    FKenAnswerArray answer_array;
+    key_value_pair_t conditions[FKEN_MAX_CONDITION_COUNT];
+    int condition_count;
+    int result;
+    int i;
 
     ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
             "read client request body done");
 
+    cont.str = content;
+    cont.len = 0;
     memset(content, 0, sizeof(content));
-    if (get_post_content(r, content, sizeof(content)) != NGX_OK) {
+    if (get_post_content(r, &cont, sizeof(content)) != NGX_OK) {
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return;
     }
 
-    strcpy(buff, "this is a test");
-    len = strlen(buff);
+    parse_params(&cont, params, FKEN_MAX_CONDITION_COUNT, &param_count);
+    logInfo("param count: %d", param_count);
+    for (i=0; i<param_count; i++) {
+        logInfo("%.*s=%.*s", FC_PRINTF_STAR_STRING_PARAMS(params[i].key),
+                FC_PRINTF_STAR_STRING_PARAMS(params[i].value));
+    }
+
+    question = get_param(params, param_count, &param_name_question);
+    if (question == NULL) {
+        ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
+        return;
+    }
+
+    cond = get_param(params, param_count, &param_name_conditions);
+    if (cond == NULL) {
+        condition_count = 0;
+    } else {
+        parse_params(cond, conditions, FKEN_MAX_CONDITION_COUNT,
+                &condition_count);
+        logInfo("condition count: %d", condition_count);
+        for (i=0; i<condition_count; i++) {
+            logInfo("%.*s=%.*s", FC_PRINTF_STAR_STRING_PARAMS(conditions[i].key),
+                    FC_PRINTF_STAR_STRING_PARAMS(conditions[i].value));
+        }
+    }
+
+    if ((result=fken_client_question_search(&client, question,
+                    conditions, condition_count, &answer_array)) != 0)
+    {
+        fprintf(stderr, "result: %d", result);
+        ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
+        return;
+    }
+
+    fprintf(stderr, "answer count: %d\n", answer_array.count);
+    for (i=0; i<answer_array.count; i++) {
+        fprintf(stderr, "%d. answer========\n", i + 1);
+        fprintf(stderr, "id: %"PRId64"\n", answer_array.answers[i].id);
+        fprintf(stderr, "%.*s\n", FC_PRINTF_STAR_STRING_PARAMS(answer_array.answers[i].answer));
+    }
+
+    if (answer_array.count > 0) {
+        buff = answer_array.answers[0].answer.str;
+        len = answer_array.answers[0].answer.len;
+    } else {
+        buff = strdup("this is a test");
+        len = strlen(buff);
+    }
 
     r->headers_out.content_type.len = CONTENT_TYPE_LEN;
     r->headers_out.content_type.data = (u_char *)CONTENT_TYPE_STR;
@@ -254,6 +430,7 @@ static ngx_int_t ngx_http_fastken_process_init(ngx_cycle_t *cycle)
 #define CLIENT_CONF_FILENAME  "/etc/fken/client.conf"
 #endif
 	int result;
+
 
 	fprintf(stderr, "ngx_http_fastken_process_init pid=%d, "
             "client config filename: %s\n", getpid(), CLIENT_CONF_FILENAME);
