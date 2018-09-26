@@ -78,7 +78,8 @@ ngx_module_t  ngx_http_fastken_module = {
 };
 
 static ngx_int_t fken_send_reply_chunk(ngx_http_request_t *r,
-        const bool last_buf, const char *buff, const int size)
+        const bool last_buf, const char *buff, const int size,
+        const bool duplicate)
 {
 	ngx_buf_t *b;
 	ngx_chain_t out;
@@ -92,28 +93,26 @@ static ngx_int_t fken_send_reply_chunk(ngx_http_request_t *r,
 		return NGX_HTTP_INTERNAL_SERVER_ERROR;
 	}
 
-	new_buff = ngx_palloc(r->pool, sizeof(u_char) * size);
-	if (new_buff == NULL) {
-		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-			"ngx_palloc fail");
-		return NGX_HTTP_INTERNAL_SERVER_ERROR;
-	}
+    if (duplicate) {
+        new_buff = ngx_palloc(r->pool, sizeof(u_char) * size);
+        if (new_buff == NULL) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                    "ngx_palloc %d bytes fail", size);
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        memcpy(new_buff, buff, size);
+    } else {
+        new_buff = (u_char *)buff;
+    }
 
 	out.buf = b;
 	out.next = NULL;
 
-	memcpy(new_buff, buff, size);
-
-	b->pos = (u_char *)new_buff;
-	b->last = (u_char *)new_buff + size;
+	b->pos = new_buff;
+	b->last = new_buff + size;
 	b->memory = 1;
 	b->last_in_chain = last_buf;
 	b->last_buf = last_buf;
-
-	/*
-	ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-			"ngx_http_output_filter, sent: %d", r->connection->sent);
-	*/
 
 	rc = ngx_http_output_filter(r, &out);
 	if (!(rc == NGX_OK || rc == NGX_AGAIN)) {
@@ -132,7 +131,6 @@ static ngx_int_t get_post_content(ngx_http_request_t *r, string_t *data,
     int bytes;
 
     content_length = r->headers_in.content_length_n;
-    ngx_log_error(NGX_LOG_NOTICE, r->connection->log, 0, "[get_post_content] [content_length:%d]", content_length); //DEBUG
     if(r->request_body == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "reqeust_body:null");
         return NGX_ERROR;
@@ -265,28 +263,155 @@ static string_t *get_param(key_value_pair_t *params,
     return NULL;
 }
 
-static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
+static ngx_int_t set_http_header(ngx_http_request_t *r,
+    const char *key, const char *low_key, const int key_len,
+    char *value, const int value_len)
+{
+    u_char *new_buff;
+    ngx_table_elt_t  *cc;
+
+	new_buff = ngx_palloc(r->pool, sizeof(u_char) * (value_len + 1));
+	if (new_buff == NULL) {
+		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+			"ngx_palloc %d bytes fail", value_len + 1);
+		return NGX_ERROR;
+	}
+
+    cc = ngx_list_push(&r->headers_out.headers);
+    if (cc == NULL)
+    {
+        return NGX_ERROR;
+    }
+
+    memcpy(new_buff, value, value_len);
+
+    cc->hash = 1;
+    cc->key.len = key_len;
+    cc->key.data = (u_char *)key;
+    cc->lowcase_key = (u_char *)low_key;
+    cc->value.len = value_len;
+    cc->value.data = new_buff;
+
+    return NGX_OK;
+}
+
+static inline ngx_int_t set_header_answer_count(ngx_http_request_t *r,
+        const int answer_count)
+{
+#define HEADER_NAME_ANSWER_COUNT_STR "FKen-Answer-Count"
+#define HEADER_NAME_ANSWER_COUNT_LEN (sizeof(HEADER_NAME_ANSWER_COUNT_STR) - 1)
+
+    int value_len;
+    char buff[20];
+
+    value_len = sprintf(buff, "%d", answer_count);
+    return set_http_header(r, HEADER_NAME_ANSWER_COUNT_STR,
+            "fken-answer-count", HEADER_NAME_ANSWER_COUNT_LEN,
+            buff, value_len);
+}
+
+static ngx_int_t send_response(ngx_http_request_t *r,
+        FKenAnswerArray *answer_array)
 {
 #define CONTENT_TYPE_STR   "text/plain"
 #define CONTENT_TYPE_LEN  (sizeof(CONTENT_TYPE_STR) - 1)
 
+#define ANSWER_SEPERATOR_STR   "\n==========answer split line==========\n"
+#define ANSWER_SEPERATOR_LEN   (sizeof(ANSWER_SEPERATOR_STR) - 1)
+
+#define ANSER_ID_BUFF_SIZE    64
+
+#define EMPTY_RESP_STR   "没有找到你想要的内容，换个问题试试？\n"
+#define EMPTY_RESP_LEN   (sizeof(EMPTY_RESP_STR) - 1)
+
+    char *out_content;
+    ngx_int_t rc;
+    int content_len;
+    char id_buffs[FKEN_MAX_ANSWER_COUNT][ANSER_ID_BUFF_SIZE];
+    string_t answer_ids[FKEN_MAX_ANSWER_COUNT];
+    int i;
+
+    if (answer_array->count > 0) {
+        content_len = 0;
+        for (i=0; i<answer_array->count; i++) {
+            if (i > 0) {
+                content_len += ANSWER_SEPERATOR_LEN;
+            }
+
+            answer_ids[i].str = id_buffs[i];
+            answer_ids[i].len = snprintf(answer_ids[i].str,
+                    ANSER_ID_BUFF_SIZE, "question id: %"PRId64"\n\n",
+                    answer_array->answers[i].id);
+            content_len += answer_ids[i].len + answer_array->
+                answers[i].answer.len;
+        }
+
+        out_content = (char *)ngx_palloc(r->pool, sizeof(u_char) * content_len);
+        if (out_content == NULL) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                    "ngx_palloc %d bytes fail", content_len);
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+    } else {
+        out_content = NULL;
+        content_len = EMPTY_RESP_LEN;
+    }
+
+    set_header_answer_count(r, answer_array->count);
+    r->headers_out.content_type.len = CONTENT_TYPE_LEN;
+    r->headers_out.content_type.data = (u_char *)CONTENT_TYPE_STR;
+    r->headers_out.content_length_n = content_len;
+    r->headers_out.status = NGX_HTTP_OK;
+
+    ngx_http_set_content_type(r);
+
+    rc = ngx_http_send_header(r);
+    if (rc == NGX_ERROR || rc > NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                "ngx_http_send_header fail, return code: %d", rc);
+        return rc;
+    }
+
+    if (answer_array->count > 0) {
+        char *p;
+        p = out_content;
+        for (i=0; i<answer_array->count; i++) {
+            if (i > 0) {
+                memcpy(p, ANSWER_SEPERATOR_STR, ANSWER_SEPERATOR_LEN);
+                p += ANSWER_SEPERATOR_LEN;
+            }
+            memcpy(p, answer_ids[i].str, answer_ids[i].len);
+            p += answer_ids[i].len;
+
+            memcpy(p, answer_array->answers[i].answer.str,
+                    answer_array->answers[i].answer.len);
+            p += answer_array->answers[i].answer.len;
+        }
+
+        return fken_send_reply_chunk(r, true,
+                out_content, content_len, false);
+    } else {
+        return fken_send_reply_chunk(r, true,
+                EMPTY_RESP_STR, EMPTY_RESP_LEN, false);
+    }
+}
+
+static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
+{
+#define MAX_QUESTION_SIZE 64
+
     ngx_int_t rc;
     key_value_pair_t params[FKEN_MAX_CONDITION_COUNT];
     int param_count;
-	char content[16 * 1024];
+	char content[1 * 1024];
     string_t cont;
-    char *buff;
-    int len;
     string_t *question;
     string_t *cond;
     FKenAnswerArray answer_array;
     key_value_pair_t conditions[FKEN_MAX_CONDITION_COUNT];
     int condition_count;
     int result;
-    int i;
-
-    ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
-            "read client request body done");
+    //int i;
 
     cont.str = content;
     cont.len = 0;
@@ -297,14 +422,26 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
     }
 
     parse_params(&cont, params, FKEN_MAX_CONDITION_COUNT, &param_count);
+
+    /*
     logInfo("param count: %d", param_count);
     for (i=0; i<param_count; i++) {
         logInfo("%.*s=%.*s", FC_PRINTF_STAR_STRING_PARAMS(params[i].key),
                 FC_PRINTF_STAR_STRING_PARAMS(params[i].value));
     }
+    */
 
     question = get_param(params, param_count, &param_name_question);
     if (question == NULL) {
+        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+                "no question in body data");
+        ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
+        return;
+    }
+    if (question->len > MAX_QUESTION_SIZE) {
+        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+                "question length: %d exceeds %d",
+                question->len, MAX_QUESTION_SIZE);
         ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
         return;
     }
@@ -315,101 +452,41 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
     } else {
         parse_params(cond, conditions, FKEN_MAX_CONDITION_COUNT,
                 &condition_count);
+        /*
         logInfo("condition count: %d", condition_count);
         for (i=0; i<condition_count; i++) {
             logInfo("%.*s=%.*s", FC_PRINTF_STAR_STRING_PARAMS(conditions[i].key),
                     FC_PRINTF_STAR_STRING_PARAMS(conditions[i].value));
         }
+        */
     }
 
     if ((result=fken_client_question_search(&client, question,
                     conditions, condition_count, &answer_array)) != 0)
     {
-        fprintf(stderr, "result: %d", result);
+        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+                "question_search result: %d", result);
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return;
     }
 
-    fprintf(stderr, "answer count: %d\n", answer_array.count);
-    for (i=0; i<answer_array.count; i++) {
-        fprintf(stderr, "%d. answer========\n", i + 1);
-        fprintf(stderr, "id: %"PRId64"\n", answer_array.answers[i].id);
-        fprintf(stderr, "%.*s\n", FC_PRINTF_STAR_STRING_PARAMS(answer_array.answers[i].answer));
-    }
-
-    if (answer_array.count > 0) {
-        buff = answer_array.answers[0].answer.str;
-        len = answer_array.answers[0].answer.len;
-    } else {
-        buff = strdup("this is a test");
-        len = strlen(buff);
-    }
-
-    r->headers_out.content_type.len = CONTENT_TYPE_LEN;
-    r->headers_out.content_type.data = (u_char *)CONTENT_TYPE_STR;
-    r->headers_out.content_length_n = len;
-    r->headers_out.status = NGX_HTTP_OK;
-
-	ngx_http_set_content_type(r);
-
-    logInfo("body:: %.*s [%d]", 256, content, (int)strlen(content));
-
-	rc = ngx_http_send_header(r);
-	if (rc == NGX_ERROR || rc > NGX_OK)
-	{
-		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-			"ngx_http_send_header fail, return code=%d", rc);
-		return;
-	}
-
-    rc = fken_send_reply_chunk(r, true, buff, len);
+    rc = send_response(r, &answer_array);
     ngx_http_finalize_request(r, rc);
 }
 
 static ngx_int_t ngx_http_fastken_handler(ngx_http_request_t *r)
 {
 	ngx_int_t rc;
-	char url[4096];
-	char *p;
-
-    ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-            "file: "__FILE__", line: %d, NGX_DONE: %d, NGX_HTTP_SPECIAL_RESPONSE: %d, length: %d",
-            __LINE__, NGX_DONE, NGX_HTTP_SPECIAL_RESPONSE, (int)(r->headers_in.content_length_n));
 
 	if (!(r->method & (NGX_HTTP_POST))) {
 		return NGX_HTTP_NOT_ALLOWED;
 	}
 
     rc = ngx_http_read_client_request_body(r, ngx_http_fastken_body_handler);
-
-    logInfo("post_handler: %p, equal: %d", r->request_body->post_handler,
-            r->request_body->post_handler == ngx_http_fastken_body_handler);
-    logInfo("rest: %d", (int)r->request_body->rest);
-
     if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
         return rc;
     }
     return NGX_DONE;
-
-	if (r->uri.len + r->args.len + 1 >= sizeof(url))
-	{
-		ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-			"url too long, exceeds %d bytes!", (int)sizeof(url));
-		return NGX_HTTP_BAD_REQUEST;
-	}
-
-	p = url;
-	memcpy(p, r->uri.data, r->uri.len);
-	p += r->uri.len;
-	if (r->args.len > 0)
-	{
-		*p++ = '?';
-		memcpy(p, r->args.data, r->args.len);
-		p += r->args.len;
-	}
-	*p = '\0';
-
-	return NGX_OK;
 }
 
 static char *ngx_http_fastken_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
