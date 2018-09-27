@@ -122,8 +122,8 @@ static inline int fken_client_check_conn(FKenClient *client)
 }
 
 static int question_search_req_pack(FKenClient *client,
-        const string_t *question, const key_value_pair_t *conditions,
-        const int condition_count, int *buff_len)
+        const string_t *question, const key_value_pair_t *vars,
+        const int var_count, int *buff_len)
 {
     FKENProtoQuestionSearchReqHeader *req_header;
     const key_value_pair_t *kv_pair;
@@ -146,10 +146,10 @@ static int question_search_req_pack(FKenClient *client,
                 __LINE__, question->len);
         return EOVERFLOW;
     }
-    if (condition_count > FKEN_MAX_CONDITION_COUNT) {
+    if (var_count > FKEN_MAX_CONDITION_COUNT) {
 		logError("file: "__FILE__", line: %d, "
                 "too many condions: %d, exceeds %d", __LINE__,
-                condition_count, FKEN_MAX_CONDITION_COUNT);
+                var_count, FKEN_MAX_CONDITION_COUNT);
         return EOVERFLOW;
     }
     expect_size = (req_header->question - client->buff) + question->len;
@@ -161,11 +161,11 @@ static int question_search_req_pack(FKenClient *client,
     }
 
     req_header->question_len = question->len;
-    req_header->kv_count = condition_count;
+    req_header->kv_count = var_count;
     memcpy(req_header->question, question->str, question->len);
 
-    kv_end = conditions + condition_count;
-    for (kv_pair=conditions; kv_pair<kv_end; kv_pair++) {
+    kv_end = vars + var_count;
+    for (kv_pair=vars; kv_pair<kv_end; kv_pair++) {
         expect_size += sizeof(FKENProtoQuestionSearchKVEntry) +
             kv_pair->key.len + kv_pair->value.len;
     }
@@ -177,7 +177,7 @@ static int question_search_req_pack(FKenClient *client,
     }
     
     p = req_header->question + question->len;
-    for (kv_pair=conditions; kv_pair<kv_end; kv_pair++) {
+    for (kv_pair=vars; kv_pair<kv_end; kv_pair++) {
         kv_entry = (FKENProtoQuestionSearchKVEntry *)p;
         kv_entry->key_len = kv_pair->key.len;
         kv_entry->value_len = kv_pair->value.len;
@@ -247,7 +247,7 @@ static int question_search_resp_unpack(FKenClient *client,
 }
 
 int fken_client_question_search(FKenClient *client, const string_t *question,
-    const key_value_pair_t *conditions, const int condition_count,
+    const key_value_pair_t *vars, const int var_count,
     FKenAnswerArray *answer_array)
 {
 	int result;
@@ -260,8 +260,8 @@ int fken_client_question_search(FKenClient *client, const string_t *question,
         return result;
     }
 
-    if ((result=question_search_req_pack(client, question, conditions,
-                    condition_count, &req_len)) != 0)
+    if ((result=question_search_req_pack(client, question, vars,
+                    var_count, &req_len)) != 0)
     {
         return result;
     }

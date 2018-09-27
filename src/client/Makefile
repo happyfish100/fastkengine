@@ -33,6 +33,7 @@ install:
 	cp -f $(ALL_HEADERS) /usr/local/include/fastken/
 
 	if [ ! -e /usr/lib/libfkenclient.so ]; then ln -sf $(TARGET_LIB)/libfkenclient.so /usr/lib/libfkenclient.so; fi
+	if [ -d /usr/lib64 ] && [ ! -e /usr/lib64/libfkenclient.so ]; then ln -sf $(TARGET_LIB)/libfkenclient.so /usr/lib64/libfkenclient.so; fi
 clean:
 	rm -f *.lo $(ALL_LIBS) $(ALL_PRGS)
 

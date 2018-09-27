@@ -740,13 +740,11 @@ static int qa_reader_parse_question(QAReaderContext *context,
     return 0;
 }
 
-static int compare_key_value_pair(const void *p1, const void *p2)
+int compare_key_value_pair(const key_value_pair_t *kv1,
+        const key_value_pair_t *kv2)
 {
-    key_value_pair_t *kv1, *kv2;
     int result;
 
-    kv1 = (key_value_pair_t *)p1;
-    kv2 = (key_value_pair_t *)p2;
     if ((result=fc_string_compare(&kv1->key, &kv2->key)) != 0) {
         return result;
     }
@@ -754,7 +752,7 @@ static int compare_key_value_pair(const void *p1, const void *p2)
     return fc_string_compare(&kv1->value, &kv2->value);
 }
 
-int compare_answer_conditions(const AnswerConditionArray *cond1,
+static int compare_answer_conditions(const AnswerConditionArray *cond1,
         const AnswerConditionArray *cond2)
 {
     int sub;
@@ -922,7 +920,8 @@ static int qa_reader_combine_answer(QAReaderContext *context,
     for (p=answer_entries; p<end; p++) {
         if (p->conditions.count > 1) {
             qsort(p->conditions.kv_pairs, p->conditions.count,
-                    sizeof(key_value_pair_t), compare_key_value_pair);
+                    sizeof(key_value_pair_t),
+                    (int (*)(const void *, const void *))compare_key_value_pair);
         }
     }
 

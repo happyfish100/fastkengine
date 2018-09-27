@@ -15,8 +15,8 @@
 #define PARAM_NAME_QUESTION_STR  "question"
 #define PARAM_NAME_QUESTION_LEN  (sizeof(PARAM_NAME_QUESTION_STR) - 1)
 
-#define PARAM_NAME_CONDITIONS_STR  "conditions"
-#define PARAM_NAME_CONDITIONS_LEN  (sizeof(PARAM_NAME_CONDITIONS_STR) - 1)
+#define PARAM_NAME_VARS_STR      "vars"
+#define PARAM_NAME_VARS_LEN      (sizeof(PARAM_NAME_VARS_STR) - 1)
 
 typedef struct {
 	ngx_http_upstream_conf_t   upstream;
@@ -30,8 +30,8 @@ static string_t start_mark = {START_MARK_STR, START_MARK_LEN};
 static string_t end_mark = {END_MARK_STR, END_MARK_LEN};
 static string_t param_name_question = {PARAM_NAME_QUESTION_STR,
     PARAM_NAME_QUESTION_LEN};
-static string_t param_name_conditions = {PARAM_NAME_CONDITIONS_STR,
-    PARAM_NAME_CONDITIONS_LEN};
+static string_t param_name_vars = {PARAM_NAME_VARS_STR,
+    PARAM_NAME_VARS_LEN};
 
 static char *ngx_http_fastken_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 //static ngx_int_t ngx_http_fastken_init(ngx_conf_t *cf);
@@ -427,8 +427,8 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
     string_t *cond;
     FKenAnswerArray answer_array;
     char answer_ids[32 * FKEN_MAX_ANSWER_COUNT];
-    key_value_pair_t conditions[FKEN_MAX_CONDITION_COUNT];
-    int condition_count;
+    key_value_pair_t vars[FKEN_MAX_CONDITION_COUNT];
+    int var_count;
     int result;
     //int i;
 
@@ -465,23 +465,23 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
         return;
     }
 
-    cond = get_param(params, param_count, &param_name_conditions);
+    cond = get_param(params, param_count, &param_name_vars);
     if (cond == NULL) {
-        condition_count = 0;
+        var_count = 0;
     } else {
-        parse_params(cond, conditions, FKEN_MAX_CONDITION_COUNT,
-                &condition_count);
+        parse_params(cond, vars, FKEN_MAX_CONDITION_COUNT,
+                &var_count);
         /*
-        logInfo("condition count: %d", condition_count);
-        for (int i=0; i<condition_count; i++) {
-            logInfo("%.*s=%.*s", FC_PRINTF_STAR_STRING_PARAMS(conditions[i].key),
-                    FC_PRINTF_STAR_STRING_PARAMS(conditions[i].value));
+        logInfo("var count: %d", var_count);
+        for (int i=0; i<var_count; i++) {
+            logInfo("%.*s=%.*s", FC_PRINTF_STAR_STRING_PARAMS(vars[i].key),
+                    FC_PRINTF_STAR_STRING_PARAMS(vars[i].value));
         }
         */
     }
 
     if ((result=fken_client_question_search(&client, question,
-                    conditions, condition_count, &answer_array)) != 0)
+                    vars, var_count, &answer_array)) != 0)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                 "question_search result: %d", result);

@@ -208,37 +208,56 @@ static int question_search_all(KeywordRecords *records, QAArray *results)
     return done_count;
 }
 
+static bool match_answer_conditions(const AnswerConditionArray *vars,
+        const AnswerConditionArray *conditions)
+{
+    key_value_pair_t *kv;
+    key_value_pair_t *kv_end;
+    int i;
+
+    if (conditions->count == 0) {
+        return true;
+    }
+    if (vars->count == 0) {
+        return false;
+    }
+
+    kv_end = vars->kv_pairs + vars->count;
+    for (i=0; i<conditions->count; i++) {
+        for (kv=vars->kv_pairs; kv<kv_end; kv++) {
+            if (compare_key_value_pair(conditions->kv_pairs + i, kv) == 0) {
+                break;
+            }
+        }
+        if (kv == kv_end) {  //NOT found
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static int match_answers(QAArray *qa_array, const AnswerConditionArray
-        *conditions, QASearchResultArray *results)
+        *vars, QASearchResultArray *results)
 {
     QAEntry *p;
     QAEntry *end;
     ConditionAnswerEntry *ca;
-    ConditionAnswerEntry *ca_end;
+    ConditionAnswerEntry *ca_last;
     QASearchResultEntry *dest;
 
     dest = results->entries;
     end = qa_array->entries + qa_array->count;
     for (p=qa_array->entries; p<end; p++) {
-        ca_end = p->answer->condition_answers.entries +
-            p->answer->condition_answers.count;
-        for (ca=p->answer->condition_answers.entries; ca<ca_end; ca++) {
-            if (compare_answer_conditions(conditions, &ca->conditions) == 0) {
+        ca_last = p->answer->condition_answers.entries +
+            (p->answer->condition_answers.count - 1);
+        for (ca = ca_last; ca >= p->answer->condition_answers.entries; ca--) {
+            if (match_answer_conditions(vars, &ca->conditions)) {
                 dest->question = p->question;
                 dest->answer = &ca->answer;
                 dest->id = p->answer->id;
                 dest++;
                 break;
-            }
-        }
-
-        if (ca == ca_end) {  //conditions NOT matched
-            ca = p->answer->condition_answers.entries;
-            if (ca->conditions.count == 0) {
-                dest->question = p->question;
-                dest->answer = &ca->answer;
-                dest->id = p->answer->id;
-                dest++;
             }
         }
     }
@@ -267,7 +286,7 @@ static void print_keyword_records(KeywordRecords *records)
 }
 
 int question_search(const string_t *question, const AnswerConditionArray
-        *conditions, QASearchResultArray *results)
+        *vars, QASearchResultArray *results)
 {
     int result;
     WordSegmentArray ws_out;
@@ -338,5 +357,5 @@ int question_search(const string_t *question, const AnswerConditionArray
            results->scan_count, results->matched_count);
 
     word_segment_free_result(&ws_out);
-    return match_answers(&qa_array, conditions, results);
+    return match_answers(&qa_array, vars, results);
 }
