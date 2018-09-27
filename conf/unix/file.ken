@@ -143,3 +143,15 @@
 [[answer]]
  rmdir用于删除空目录，命令示例：
  [[cmd required/]] rmdir <filepath>
+
+
+[[question id=132]]
+文件 [操作]
+
+[[answer]]
+  文件操作包括：
+    查看文件列表：ls
+    创建空文件：touch
+    查看文件内容：cat、less或者more
+    修改文件目录权限：chmod
+    修改文件目录owner：chown

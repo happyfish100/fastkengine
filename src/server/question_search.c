@@ -231,6 +231,16 @@ static int match_answers(QAArray *qa_array, const AnswerConditionArray
                 break;
             }
         }
+
+        if (ca == ca_end) {  //conditions NOT matched
+            ca = p->answer->condition_answers.entries;
+            if (ca->conditions.count == 0) {
+                dest->question = p->question;
+                dest->answer = &ca->answer;
+                dest->id = p->answer->id;
+                dest++;
+            }
+        }
     }
 
     results->count = dest - results->entries;

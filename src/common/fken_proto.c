@@ -63,13 +63,20 @@ int send_and_recv_response_header(ConnectionInfo *conn, char *data,
 {
     int ret;
 
-    if ((ret = tcpsenddata_nb(conn->sock, data, len, network_timeout)) != 0) {
+    if ((ret=tcpsenddata_nb(conn->sock, data, len, network_timeout)) != 0) {
+        logError("file: "__FILE__", line: %d, "
+                "tcpsenddata_nb fail, errno: %d, error info: %s",
+                __LINE__, ret, strerror(ret));
         return ret;
     }
-    if ((ret = tcprecvdata_nb(conn->sock, header,
+    if ((ret=tcprecvdata_nb(conn->sock, header,
             sizeof(FKENProtoHeader), network_timeout)) != 0) {
+        logError("file: "__FILE__", line: %d, "
+                "tcprecvdata_nb fail, errno: %d, error info: %s",
+                __LINE__, ret, strerror(ret));
         return ret;
     }
+
     return 0;
 }
 

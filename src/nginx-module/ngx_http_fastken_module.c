@@ -396,6 +396,24 @@ static ngx_int_t send_response(ngx_http_request_t *r,
     }
 }
 
+static void get_answer_ids_string(FKenAnswerArray *answer_array, char *buff)
+{
+    int i;
+    int len;
+    char *p;
+
+    p = buff;
+    for (i=0; i<answer_array->count; i++) {
+        if (i > 0) {
+            *p++ = ' ';
+        }
+
+        len = sprintf(p, "%"PRId64, answer_array->answers[i].id);
+        p += len;
+    }
+    *p = '\0';
+}
+
 static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
 {
 #define MAX_QUESTION_SIZE 64
@@ -408,6 +426,7 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
     string_t *question;
     string_t *cond;
     FKenAnswerArray answer_array;
+    char answer_ids[32 * FKEN_MAX_ANSWER_COUNT];
     key_value_pair_t conditions[FKEN_MAX_CONDITION_COUNT];
     int condition_count;
     int result;
@@ -432,14 +451,14 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
     */
 
     question = get_param(params, param_count, &param_name_question);
-    if (question == NULL) {
-        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+    if (question == NULL || question->len == 0) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                 "no question in body data");
         ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
         return;
     }
     if (question->len > MAX_QUESTION_SIZE) {
-        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                 "question length: %d exceeds %d",
                 question->len, MAX_QUESTION_SIZE);
         ngx_http_finalize_request(r, NGX_HTTP_BAD_REQUEST);
@@ -454,7 +473,7 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
                 &condition_count);
         /*
         logInfo("condition count: %d", condition_count);
-        for (i=0; i<condition_count; i++) {
+        for (int i=0; i<condition_count; i++) {
             logInfo("%.*s=%.*s", FC_PRINTF_STAR_STRING_PARAMS(conditions[i].key),
                     FC_PRINTF_STAR_STRING_PARAMS(conditions[i].value));
         }
@@ -464,11 +483,16 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
     if ((result=fken_client_question_search(&client, question,
                     conditions, condition_count, &answer_array)) != 0)
     {
-        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                 "question_search result: %d", result);
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return;
     }
+
+    get_answer_ids_string(&answer_array, answer_ids);
+    ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+            "answers: %d [%s] %s", answer_array.count,
+            answer_ids, content);
 
     rc = send_response(r, &answer_array);
     ngx_http_finalize_request(r, rc);
