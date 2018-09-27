@@ -22,7 +22,7 @@ major_version=$(echo $version | awk -F '.' '{print $1}')
 minor_version=$(echo $version | awk -F '.' '{print $2}')
 vars="uname=[[$uname]] osname=[[$osname]] major_version=[[$major_version]] minor_version=[[$minor_version]]"
 
-echo "vars: $vars"
-
 question=$*
-curl -v --data "question=[[$question]] vars=[[$vars]]" http://www.fastken.com/fastken
+host=www.fastken.com
+host=39.106.8.170
+curl --data "question=[[$question]] vars=[[$vars]]" http://$host/fastken
