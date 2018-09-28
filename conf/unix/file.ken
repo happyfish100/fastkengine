@@ -185,6 +185,9 @@
     find . -type f   查找当前目录下所有文件
     find . -type d   查找当前目录下所有目录
 
+  高级用法示例：
+    find / -perm -u+s 查找系统中所有使用了SUID控制的文件
+
 
 [[question id=62]]
   定位 文件|目录
@@ -327,6 +330,21 @@
 [[answer]]
  tail 加上参数 -f 即可，例如：
  [[cmd /]] tail -f <filename>
+
+
+[[question id=340]]
+ 字符集|编码 转换
+ iconv
+
+[[answer]]
+ iconv用于字符集转换，常用命令格式：
+ [[cmd /]] iconv -f <fromEncoding> -t <toEncoding> <inputFile> > <outputFile>
+
+ 列出已知的编码：
+ [[cmd /]] iconv -l
+
+ 调用示例：
+ iconv -f gbk -t utf8 inputFile > outputFile
 
 
 [[question id=410]]

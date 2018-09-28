@@ -5,7 +5,7 @@
 显示 展示 查看 show
 输出 打印 output print
 查找 找出 找到 find
-列举 列出 排列 列表 list
+列举 列出 排列 列表 罗列 list
 降序 倒序 倒排 descending descend desc
 升序 正序 顺序 ascending ascend asc
 如何 怎样 how how-to
@@ -40,3 +40,6 @@
 二进制 binary
 用户组 分组 群组 group
 用户 user
+字符集 charset
+编码 encoding
+转换 转变 切换 convert
