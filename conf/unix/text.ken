@@ -11,7 +11,7 @@
     文本替换：sed
     文本排序：sort
     文本去重：uniq
-    输出指定列：awk
+    输出指定列，可编程计算和输出：awk
     比较文件差异：diff
     比较两个文件内容：comm
     等等。。。
@@ -36,7 +36,7 @@
 
 [[question id=30]]
  搜索|匹配|查找 文本
- fgrep|egrep
+ grep|egrep|fgrep
 
 [[answer]]
  grep、egrep 和 fgrep 用于搜索文本，采用逐行匹配模式。命令格式：
@@ -71,10 +71,95 @@
  sort 对文件按行排序，默认为升序，命令格式：
  [[cmd/]] sort [filename]
  
- 几个常用选项说明：
+ 常用选项说明：
    -k field1[,field2] 指定排序字段/列，格式为 
    -n 按数值排序，10 和 9如果按默认字符串排序，9比10大，但是按照数值排序，9比10小
    -r 降序（倒序）排列
    -T dir  指定临时目录，默认为/tmp，如果/tmp空间太小，需要手工指定临时目录
    -S size 指定内存buffer大小。默认的buffer size很小，如果排序的文件很大，强烈建议加大这个参数，例如：-S 8G
+
+
+[[question id=60]]
+ 文本 去重
+ uniq
+
+[[answer]]
+ uniq 对文件按行去重，需要文件先用sort排好序，命令格式：
+ [[cmd/]] uniq [filename]
+
+ 常用选项说明：
+   -c 统计出现次数
+   -u 只输出不重复（仅出现一次）的行
+   -i 比较时不区分大小写
+
+
+[[question id=70]]
+ 输出 列|字段
+ 求和|均值
+ awk
+
+[[answer]]
+ awk输出指定列，可编程计算和输出。命令格式：
+ [[cmd/]] awk <statements>
+
+ 常用选项说明：
+   -F 指定分隔符，默认为空白字符
+
+ 求平均值（求和）：
+   cat numbers.txt | awk 'BEGIN{count=0; sum=0} {count++; sum += $1;} END{print "count: "count, "avg: "sum/count;}'
+
+ 统计web server access log中的独立IP数：
+   cat access.log-20180904 | awk '{print $1}' | sort | uniq | wc -l
+
+
+[[question id=80]]
+ 比较 文件
+ 文件 差异
+
+[[answer]]
+ diff 和 comm 均可用于比较两个文件之间的差异。diff 命令格式：
+ [[cmd/]] diff <file1> <file2>
+
+ comm 命令格式：
+ [[cmd/]] diff [-123i] <file1> <file2>
+
+ 查看 comm 命令详情请输入关键字：comm
+
+
+[[question id=81]]
+ diff
+
+[[answer]]
+ diff 用于比较两个文件之间的差异。命令格式：
+ [[cmd/]] diff <file1> <file2>
+
+ 常用选项说明：
+   -i  --ignore-case 不区分大小写
+
+
+[[question id=82]]
+ comm
+
+[[answer]]
+ comm用于查看两个文件中的不同或相同的地方。命令格式：
+ [[cmd/]] comm [-123i] <file1> <file2>
+
+ 注意：file1 和 file2 需要事先排好序
+       -1、-2、-3这三个选项有点烧脑，请仔细阅读下面的选项说明。
+       数字123前面的减号是去除（删除）的意思。
+
+ 选项说明：
+   -1  去除仅在file1 出现的内容
+   -2  去除仅在file2 出现的内容
+   -3  去除两个文件共有的内容
+   -i  不区分大小写
+
+ 找出两个文件中共有的内容：
+ [[cmd/]] comm -12 <file1> <file2>
+
+ 找出仅在文件1中出现的内容：
+ [[cmd/]] comm -23 <file1> <file2>
+
+ 找出仅在文件2中出现的内容：
+ [[cmd/]] comm -13 <file1> <file2>
 

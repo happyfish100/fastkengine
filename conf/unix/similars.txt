@@ -43,9 +43,16 @@
 字符集 charset
 编码 encoding
 转换 转变 切换 convert
-文本 字符串 text string
+文本 文字 字符串 text string
 处理 处置 handle deal
 匹配 match
 搜索 检索 search
 替换 代替 替代 replace
 排序 sort
+去重 排重 查重 去除重复 排除重复 unique
+列 栏 column
+字段 field
+求和 总和 总计 累计 合计 summation sum
+均值 平均值 平均数 average avg
+比较 对比 对照 compare
+差异 差别 异同 同异 不同 difference different
