@@ -2,7 +2,7 @@
 [[base id=1103000000]]
 
 [[question id=10]]
- 文本 处理
+ 文本|内容 处理
 
 [[answer]]
  文本处理命令包括：
@@ -18,7 +18,8 @@
 
 
 [[question id=20]]
- 打印 文本
+ 打印 文本|内容
+ echo
  printf
 
 [[answer]]
@@ -35,7 +36,7 @@
 
 
 [[question id=30]]
- 搜索|匹配|查找 文本
+ 搜索|匹配|查找 文本|内容
  grep|egrep|fgrep
 
 [[answer]]
@@ -50,7 +51,7 @@
 
 
 [[question id=40]]
- 替换 文本
+ 替换 文本|内容
  sed
 
 [[answer]]
@@ -65,7 +66,7 @@
 
 
 [[question id=50]]
- 排序 文本
+ 排序 文本|内容
 
 [[answer]]
  sort 对文件按行排序，默认为升序，命令格式：
@@ -80,7 +81,7 @@
 
 
 [[question id=60]]
- 文本 去重
+ 文本|内容 去重
  uniq
 
 [[answer]]
