@@ -34,8 +34,6 @@
 static bool daemon_mode = true;
 static int setup_server_env(const char *config_filename);
 
-static int test_segment();
-
 int main(int argc, char *argv[])
 {
     char *config_filename;
@@ -82,9 +80,6 @@ int main(int argc, char *argv[])
     sched_set_delay_params(300, 1024);
     r = setup_server_env(config_filename);
     gofailif(r,"");
-
-
-    r = test_segment();
 
     r = sf_startup_schedule(&schedule_tid);
     gofailif(r,"");
@@ -154,39 +149,5 @@ static int setup_server_env(const char *config_filename)
     result = sf_setup_signal_handler();
 
     log_set_cache(true);
-    return result;
-}
-
-static int test_segment()
-{
-    int result;
-    int i;
-    string_t question;
-    key_value_pair_t kv_pairs[FKEN_MAX_CONDITION_COUNT];
-    AnswerConditionArray conditions;
-    QASearchResultArray results;
-
-    question.str = "查 找 文 件 列  表";
-    question.str = "生成 core-dump";
-    question.str = "core   dump设置生成 ";
-    //question.str = "文件b超查找";
-    //question.str = "中华 人民 共和国 中华 万岁";
-    question.len = strlen(question.str);
-
-    conditions.kv_pairs = kv_pairs;
-    FC_SET_STRING(conditions.kv_pairs[0].key, "uname");
-    FC_SET_STRING(conditions.kv_pairs[0].value, "Linux");
-    conditions.count = 1;
-    if ((result=question_search(&question, &conditions, &results)) != 0) {
-        return result;
-    }
-
-    printf("answer count: %d\n", results.count);
-    for (i=0; i<results.count; i++) {
-        printf("answer[%d] START ###########\n", i + 1);
-        printf("%.*s\n\n", FC_PRINTF_STAR_STRING_PARAMS(*(results.entries[i].answer)));
-        printf("answer[%d] END ###########\n\n", i + 1);
-    }
-
     return result;
 }

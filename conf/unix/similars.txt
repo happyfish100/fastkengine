@@ -1,5 +1,5 @@
 文件 文档 file
-目录 directory dir
+目录 路径 directory dir path
 时间 日期 time date datetime
 显示 展示 查看 show
 输出 打印 output print
@@ -22,3 +22,9 @@
 权限 权利 privilege
 修改 改变 更改 change modify
 增加 加上 追加 add append
+工作 work
+当前 现在 目前 current
+只 仅 just
+重命名 重新命名 改名 改变名字 rename
+移动 迁移 move
+复制 拷贝 copy

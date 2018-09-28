@@ -1,0 +1,60 @@
+
+[[base id=1102000000]]
+
+[[question id=10]]
+  (core dump) 设置|生成
+
+[[answer]]
+ 1. ulimit -c 查看内核core dump文件的大小限制，输出为0表示不能生成core dump文件，此时需要进行如下设置：
+ ulimit -c unlimited 
+
+ [[answer uname=Linux]]
+ 如果ulimit -c unlimited  执行失败，需要设置系统文件/etc/security/limits.conf，注释掉如下行即可：
+  *   soft    core            0
+  *   hard    core            100000
+
+ 2. 通过sysctl检查和设置内核参数：
+ kernel.core_pattern: 生成的core dump文件名，最好包含全路径
+ fs.suid_dumpable：设置为1或2
+
+ 检查命令：
+ [[cmd required/]] sysctl kernel.core_pattern fs.suid_dumpable
+
+ 设置命令：
+ [[cmd required]]
+ sudo sysctl -w kernel.core_pattern=/tmp/core.%p
+ sudo sysctl -w fs.suid_dumpable=1
+ [[/cmd]]
+
+ [[answer uname=Darwin]]
+ 2. 通过sysctl检查和设置内核参数：
+ kern.corefile: 生成的core dump文件名，最好包含全路径，例如：/cores/core.%P
+ kern.coredump：设置为1
+ kern.sugid_coredump：设置为1
+
+ 检查命令：
+ [[cmd required/]] sysctl kern.corefile kern.coredump kern.sugid_coredump
+
+ 设置命令：
+ [[cmd required]]
+ sudo sysctl -w kern.corefile=/cores/core.%P
+ sudo sysctl -w kern.coredump=1
+ sudo sysctl -w kern.sugid_coredump=1
+ [[/cmd]]
+
+
+[[question id=20]]
+  core-dump 位置
+
+[[answer]]
+ 执行命令：
+
+ [[answer uname=Linux]]
+ [[cmd required/]] sysctl kernel.core_pattern
+
+ [[answer uname=Darwin]]
+ [[cmd required/]] sysctl kern.corefile
+
+[[answer]]
+  输出的是core dump文件位置
+

@@ -15,6 +15,32 @@
     等等。。。
 
 
+[[question id=11]]
+  进入|改变 目录
+  cd
+
+[[answer]]
+  cd 用于进入指定目录，命令格式为：
+  [[cmd/]] cd [filepath]
+
+  例如：
+  cd /tmp  进入/tmp 目录
+  cd ..  返回上一级目录
+  cd ../..  返回上两级目录，以此类推
+  cd -  返回上次所在的目录，这个很有用，推荐大家使用
+  cd  不带参数的情况下，进入个人的主目录（个人HOME目录）
+  cd ~user1  进入user1的主目录
+
+
+[[question id=12]]
+  显示|输出 工作|当前 目录
+  pwd
+
+[[answer]]
+  pwd 用于显示当前工作目录：
+  [[cmd/]] pwd
+
+
 [[question id=20]]
   显示|列举 文件|目录
   ls
@@ -30,8 +56,28 @@
  每行只列出一个文件/目录名（shell脚本中常用做法）：
  [[cmd/]] ls -1 [filename]
 
+ ls -a 显示所有文件（包括隐藏文件)
+ ls *[0-9]* 显示包含数字的文件名和目录名
+
+ 只列举子目录：
+ ls -l | grep ^d
+
  [[answer uname=Linux]]
- ll 命令等价于 ls -l
+ 在Linux下，ll 命令等价于 ls -l
+
+
+[[question id=21]]
+  只 显示|列举 目录
+
+[[answer]]
+ [[cmd/]] ls -l [filepath] | grep ^d
+
+
+[[question id=22]]
+  只 显示|列举 文件
+
+[[answer]]
+ [[cmd/]] ls -l [filepath] | grep ^-
 
 
 [[question id=30]]
@@ -58,6 +104,49 @@
 [[answer]]
  rmdir用于删除空目录，命令示例：
  [[cmd required/]] rmdir <filepath>
+
+
+[[question id=45]]
+  重命名|移动 文件|目录
+  mv
+
+[[answer]]
+  使用 mv 重命名或者移动文件/目录到指定目录中。格式：
+  [[cmd/]] mv -i <source> <dest>
+
+  如果dest为目录，则执行移动操作，否则执行改名操作。
+  -i 当目标文件存在时，提示是否覆盖
+  -f 当目标文件存在时，直接覆盖
+  注意：mv不带 -i 参数时，会强制覆盖已经存在的目标文件。
+
+
+[[question id=48]]
+  复制 文件
+  cp
+
+[[answer]]
+  cp 用于复制文件或者目录，命令格式：
+  [[cmd/]] cp <file1> <file2>
+
+  cp dirname/* .  复制一个目录下的所有文件到当前工作目录
+
+  cp 几个常见选项说明：
+    -i 当目标文件存在时，提示是否覆盖
+    -f 当目标文件存在时，直接覆盖
+    -R 用于拷贝目录
+
+  注意：cp 不带 -i 参数时，会强制覆盖已经存在的目标文件。
+
+
+[[question id=49]]
+  复制 目录
+
+[[answer]]
+  cp -R 用于复制目录及其所有子目录，命令格式：
+  [[cmd/]] cp -R <path1> <path2>
+
+  如果 path2不存在，则会自动创建path2，并将path1下的所有文件及子目录拷贝到path2。
+  如果 path2已经存在，则path1及其子目录会复制到path2下，即：path2下会有个path1子目录。
 
 
 [[question id=50]]
