@@ -403,13 +403,17 @@ static void get_answer_ids_string(FKenAnswerArray *answer_array, char *buff)
     char *p;
 
     p = buff;
-    for (i=0; i<answer_array->count; i++) {
-        if (i > 0) {
-            *p++ = ' ';
-        }
+    if (answer_array->count > 0) {
+        for (i=0; i<answer_array->count; i++) {
+            if (i > 0) {
+                *p++ = ' ';
+            }
 
-        len = sprintf(p, "%"PRId64, answer_array->answers[i].id);
-        p += len;
+            len = sprintf(p, "%"PRId64, answer_array->answers[i].id);
+            p += len;
+        }
+    } else {
+        *p++ = '-';
     }
     *p = '\0';
 }

@@ -2,6 +2,7 @@
 目录 directory dir
 时间 日期 time date datetime
 显示 展示 查看 show
+输出 打印 output print
 查找 找出 找到 find
 列举 列出 排列 列表 list
 降序 倒序 倒排 descending descend desc
@@ -12,3 +13,12 @@
 位置 地方 哪儿 哪里 那儿 那里 position  location place
 设置 设定 配置 set setting config configure configuration
 删除 移除 delete remove
+创建 建立 create
+内容 正文 content
+开始 起始 开头 start
+尾部 结尾 末尾 尾巴 end
+结束 终结 terminate termination
+主人 拥有者 所有者 owner
+权限 权利 privilege
+修改 改变 更改 change modify
+增加 加上 追加 add append

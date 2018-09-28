@@ -1,106 +1,21 @@
 
 [[base id=1101000000]]
 
-[[question id = 1 ]]
-  question1
-  question2
-  ...
-
-[[answer key1=value1 ...]]
-    the answer can be multi-lines
-
-* Example
-
-[[question id=123]]
-  (core dump) 设置|生成
+[[question id=10]]
+文件 [操作]
 
 [[answer]]
- 1. ulimit -c 查看内核core dump文件的大小限制，输出为0表示不能生成core dump文件，此时需要进行如下设置：
- ulimit -c unlimited 
-
- [[answer uname=Linux]]
- 如果ulimit -c unlimited  执行失败，需要设置系统文件/etc/security/limits.conf，注释掉如下行即可：
-  *   soft    core            0
-  *   hard    core            100000
-
- 2. 通过sysctl检查和设置内核参数：
- kernel.core_pattern: 生成的core dump文件名，最好包含全路径
- fs.suid_dumpable：设置为1或2
-
- 检查命令：
- [[cmd required/]] sysctl kernel.core_pattern fs.suid_dumpable
-
- 设置命令：
- [[cmd required]]
- sudo sysctl -w kernel.core_pattern=/tmp/core.%p
- sudo sysctl -w fs.suid_dumpable=1
- [[/cmd]]
-
- [[answer uname=Darwin]]
- 2. 通过sysctl检查和设置内核参数：
- kern.corefile: 生成的core dump文件名，最好包含全路径，例如：/cores/core.%P
- kern.coredump：设置为1
- kern.sugid_coredump：设置为1
-
- 检查命令：
- [[cmd required/]] sysctl kern.corefile kern.coredump kern.sugid_coredump
-
- 设置命令：
- [[cmd required]]
- sudo sysctl -w kern.corefile=/cores/core.%P
- sudo sysctl -w kern.coredump=1
- sudo sysctl -w kern.sugid_coredump=1
- [[/cmd]]
+  文件操作包括：
+    查看文件列表：ls
+    创建空文件：touch
+    创建目录：mkdir
+    查看文件内容：cat、less或者more
+    修改文件目录权限：chmod
+    修改文件目录owner：chown
+    等等。。。
 
 
-[[question id=124]]
-  core-dump 位置
-
-[[answer]]
- 执行命令：
-
- [[answer uname=Linux]]
- [[cmd required/]] sysctl kernel.core_pattern
-
- [[answer uname=Darwin]]
- [[cmd required/]] sysctl kern.corefile
-
-[[answer]]
-  输出的是core dump文件位置
-
-
-[[question id=125]]
-  时间 降序 文件|目录|显示|列举|ls
-
-[[answer]]
- ls 带上参数-t即可，例如：
- [[cmd required/]] ls -lt [filename]
-
-
-[[question id=126]]
-  时间 升序 文件|目录|显示|列举|ls
-
-[[answer]]
- ls 带上参数-rt即可，例如：
- [[cmd required/]] ls -lrt [filename]
-
-[[question id=127]]
-  文件|目录|ls 大小 降序 [显示|列举]
-
-[[answer]]
- ls 带上参数-S即可，例如：
- [[cmd required/]] ls -lS [filename]
-
-
-[[question id=128]]
-  文件|目录|ls 大小 升序 [显示|列举]
-
-[[answer]]
- ls 带上参数-rS即可，例如：
- [[cmd required/]] ls -lrS [filename]
-
-
-[[question id=129]]
+[[question id=20]]
   显示|列举 文件|目录
   ls
 
@@ -119,7 +34,7 @@
  ll 命令等价于 ls -l
 
 
-[[question id=130]]
+[[question id=30]]
   删除 文件|目录
   rm
 
@@ -136,7 +51,7 @@
        切勿尝试执行：rm -rf /
 
 
-[[question id=131]]
+[[question id=40]]
   删除 空 目录
   rmdir
 
@@ -145,13 +60,133 @@
  [[cmd required/]] rmdir <filepath>
 
 
-[[question id=132]]
-文件 [操作]
+[[question id=50]]
+  时间 降序 文件|目录|显示|列举|ls
 
 [[answer]]
-  文件操作包括：
-    查看文件列表：ls
-    创建空文件：touch
-    查看文件内容：cat、less或者more
-    修改文件目录权限：chmod
-    修改文件目录owner：chown
+ ls 带上参数-t即可，例如：
+ [[cmd required/]] ls -lt [filename]
+
+
+[[question id=60]]
+  时间 升序 文件|目录|显示|列举|ls
+
+[[answer]]
+ ls 带上参数-rt即可，例如：
+ [[cmd required/]] ls -lrt [filename]
+
+
+[[question id=70]]
+  文件|目录|ls 大小 降序 [显示|列举]
+
+[[answer]]
+ ls 带上参数-S即可，例如：
+ [[cmd required/]] ls -lS [filename]
+
+
+[[question id=80]]
+  文件|目录|ls 大小 升序 [显示|列举]
+
+[[answer]]
+ ls 带上参数-rS即可，例如：
+ [[cmd required/]] ls -lrS [filename]
+
+
+[[question id=210]]
+    创建 文件 [空]
+    touch
+
+[[answer]]
+ [[cmd required/]] touch <filename>
+
+
+[[question id=220]]
+    创建 目录
+    mkdir
+
+[[answer]]
+ mkdir 用于创建目录。命令格式：
+ [[cmd required/]] mkdir <dirname>
+
+ 加上 -p 参数用于依次创建文件路径中不存在的目录，例如：
+ [[cmd required/]] mkdir -p <filepath>
+
+
+[[question id=300]]
+    显示|输出 文件 内容
+    cat
+    less|more
+
+[[answer]]
+ 显示文件内容的命令有：cat、vi或vim、less或more、head、tail等。
+ 显示整个文件内容：
+ [[cmd /]] cat <filename>
+
+ less或者more可以滚动查看文件内容，通常用于查看大文本文件（比vi或vim打开速度更快）：
+ [[cmd /]] less <filename>
+
+
+[[question id=310]]
+ 显示 文件 头部|开始
+ head
+
+[[answer]]
+ head用于显示文件头部内容，默认显示10行，如：
+ [[cmd /]] head <filename>
+
+ 可以通过 -n 参数指定显示行数，例如：
+ [[cmd /]] head -n 100 <filename>
+
+
+[[question id=320]]
+ 显示 文件 尾部|结束
+ tail
+
+[[answer]]
+ tail用于显示文件尾部内容，默认显示10行，如：
+ [[cmd /]] tail <filename>
+
+ 可以通过 -n参数指定显示行数，例如：
+ [[cmd /]] tail -n 100 <filename>
+
+ 可以通过 -f 参数滚动显示文件内容，tail -f 通常用于查看日志文件，例如：
+ [[cmd /]] tail -f <filename>
+
+
+[[question id=330]]
+ 滚动|增量 查看|输出 文件 [内容]
+
+[[answer]]
+ tail 加上参数 -f 即可，例如：
+ [[cmd /]] tail -f <filename>
+
+
+[[question id=410]]
+ 修改|设置|增加 文件|目录 权限
+ chmod
+
+[[answer]]
+ 使用 chmod 修改文件或目录权限。例如：
+ [[cmd /]] chmod 755 <filename>
+ [[cmd /]] chmod 600 <filename>
+
+ 增加可执行权限：
+ [[cmd /]] chmod +x <filename>
+
+ 如果要对一个目录及其子目录递归执行，加上 -R 参数即可。例如：
+ [[cmd /]] chmod -R 755 <filename>
+
+
+[[question id=420]]
+ 修改|设置 文件|目录 所有者
+ chown
+
+[[answer]]
+ 使用 chown 修改文件或目录所有者。常用命令格式如下：
+ [[cmd /]] chown <user> <filepath>
+ [[cmd /]] chown <user>:<group> <filepath>
+
+ 如果要对一个目录及其子目录递归执行，加上 -R 参数即可。例如：
+ [[cmd /]] chown -R <user> <filepath>
+
+
