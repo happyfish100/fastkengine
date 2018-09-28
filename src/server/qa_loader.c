@@ -113,11 +113,14 @@ static int load_question_answers(QAReaderContext *reader)
         keyword_records_normalize(&entry.questions);
         keyword_records_unique(&entry.questions);
 
+        logInfo("line: %d, questions count: %d", __LINE__, entry.questions.count);
+
         if ((result=question_index_adds(&g_server_vars.ki_context,
             &entry.questions, &entry.answer)) != 0)
         {
             break;
         }
+        logInfo("line: %d, questions count: %d\n", __LINE__, entry.questions.count);
     }
 
     return result;
@@ -139,6 +142,7 @@ int qa_loader_init(char **filenames, const int count)
     for (pp=filenames; pp<end; pp++) {
         result = qa_reader_init(&reader, &g_server_vars.kh_context.
                 string_allocator, &buffer, *pp);
+
         if (result != 0) {
             break;
         }

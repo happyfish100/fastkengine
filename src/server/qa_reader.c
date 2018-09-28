@@ -615,11 +615,13 @@ static int parse_question_keywords(QAReaderContext *context,
         karray.count++;
     }
 
+    /*
     logInfo("keywords count: %d", karray.count);
     for (current=karray.keywords; current<karray.keywords+karray.count; current++) {
         printf("%.*s ", FC_PRINTF_STAR_STRING_PARAMS(*current));
     }
     printf("\n");
+    */
 
     return expand_question_keywords(context, &karray, records);
 }
@@ -736,7 +738,7 @@ static int qa_reader_parse_question(QAReaderContext *context,
         }
     }
 
-    print_keyword_records(&entry->questions);
+    //print_keyword_records(&entry->questions);
     return 0;
 }
 
@@ -939,6 +941,7 @@ static int qa_reader_combine_answer(QAReaderContext *context,
         return result;
     }
 
+    /*
     logInfo("======answer count====== %d", answer_array->count);
 
     end = answer_array->entries + answer_array->count;
@@ -959,6 +962,7 @@ static int qa_reader_combine_answer(QAReaderContext *context,
                 FC_PRINTF_STAR_STRING_PARAMS(p->answer));
         printf("$$$$$$$$$$$$$$$$\n");
     }
+    */
 
     return 0;
 }
