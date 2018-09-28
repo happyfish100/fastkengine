@@ -1,0 +1,80 @@
+
+[[base id=1103000000]]
+
+[[question id=10]]
+ 文本 处理
+
+[[answer]]
+ 文本处理命令包括：
+    输出文本内容：echo 或 printf
+    搜索字符串：grep、egrep 或 fgrep
+    文本替换：sed
+    文本排序：sort
+    文本去重：uniq
+    输出指定列：awk
+    比较文件差异：diff
+    比较两个文件内容：comm
+    等等。。。
+
+
+[[question id=20]]
+ 打印 文本
+ printf
+
+[[answer]]
+ echo 和 printf 用于输出文本，命令格式：
+ [[cmd/]] echo [text]
+ [[cmd/]] printf <format> <arg1> [arg2] ...
+ 
+ echo输出一行内容，printf需要自己加换行符
+ echo -n 不输出末尾的换行符，例如：
+ [[cmd/]] echo -n 'this is a test'
+
+ printf 示例：
+ [[cmd/]] printf "this is a %s\n" test
+
+
+[[question id=30]]
+ 搜索|匹配|查找 文本
+ fgrep|egrep
+
+[[answer]]
+ grep、egrep 和 fgrep 用于搜索文本，采用逐行匹配模式。命令格式：
+ [[cmd/]] grep <pattern]> <filename>
+
+ grep 和 egrep 支持正则表达式，fgrep仅支持字符串匹配
+ 例如：grep [0-9] /var/log/messages 搜索/var/log/messages中所有包含数字的行 
+
+ 如果要匹配 减号打头的字符串，采用如下格式：
+   grep -- -其他字符串 ...
+
+
+[[question id=40]]
+ 替换 文本
+ sed
+
+[[answer]]
+ sed 通常用于替换文本，采用逐行替换模式。命令格式：
+ [[cmd/]] sed 's/olds/news/g' [filename]
+
+ 使用 -i 原地替换文件中的字符串，例如：
+[[answer uname=Darwin]]
+   sed -i "" 's/olds/news/g' myfile
+[[answer uname=Linux]]
+   sed -i 's/olds/news/g' myfile
+
+
+[[question id=50]]
+ 排序 文本
+
+[[answer]]
+ sort 对文件按行排序，默认为升序，命令格式：
+ [[cmd/]] sort [filename]
+ 
+ 几个常用选项说明：
+   -k field1[,field2] 指定排序字段/列，格式为 
+   -n 按数值排序，10 和 9如果按默认字符串排序，9比10大，但是按照数值排序，9比10小
+   -r 降序（倒序）排列
+   -T dir  指定临时目录，默认为/tmp，如果/tmp空间太小，需要手工指定临时目录
+   -S size 指定内存buffer大小。默认的buffer size很小，如果排序的文件很大，强烈建议加大这个参数，例如：-S 8G
+

@@ -3,7 +3,7 @@
 路径 途径 path
 时间 日期 time date datetime
 显示 展示 查看 show
-输出 打印 output print
+输出 打印 output print echo
 查找 找出 找到 find
 列举 列出 排列 列表 罗列 list
 降序 倒序 倒排 descending descend desc
@@ -43,3 +43,9 @@
 字符集 charset
 编码 encoding
 转换 转变 切换 convert
+文本 字符串 text string
+处理 处置 handle deal
+匹配 match
+搜索 检索 search
+替换 代替 替代 replace
+排序 sort
