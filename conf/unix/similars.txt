@@ -1,5 +1,6 @@
 文件 文档 file
-目录 路径 directory dir path
+目录 directory dir
+路径 途径 path
 时间 日期 time date datetime
 显示 展示 查看 show
 输出 打印 output print
@@ -10,7 +11,7 @@
 如何 怎样 how how-to
 生成 产生 产出 形成 generate produce
 大小 尺寸 size
-位置 地方 哪儿 哪里 那儿 那里 position  location place
+位置 地方 哪儿 哪里 那儿 那里 定位 position  location locate place
 设置 设定 配置 set setting config configure configuration
 删除 移除 delete remove
 创建 建立 create
@@ -28,3 +29,14 @@
 重命名 重新命名 改名 改变名字 rename
 移动 迁移 move
 复制 拷贝 copy
+链接 link
+符号链接  symbol-link symbolic-link
+软链接 soft-link
+硬链接 物理链接 hard-link
+类型 type
+信息 information info
+程序 脚本 命令 程式 program
+可执行 可运行 runable executable
+二进制 binary
+用户组 分组 群组 group
+用户 user

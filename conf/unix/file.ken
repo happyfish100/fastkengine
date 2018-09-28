@@ -16,7 +16,7 @@
 
 
 [[question id=11]]
-  进入|改变 目录
+  进入|改变 目录|路径
   cd
 
 [[answer]]
@@ -33,7 +33,7 @@
 
 
 [[question id=12]]
-  显示|输出 工作|当前 目录
+  显示|输出 工作|当前 目录|路径
   pwd
 
 [[answer]]
@@ -149,7 +149,86 @@
   如果 path2已经存在，则path1及其子目录会复制到path2下，即：path2下会有个path1子目录。
 
 
-[[question id=50]]
+[[question id=51]]
+  创建 符号链接|软链接|硬链接|链接
+  ln
+
+[[answer]]
+  ln 用于创建链接，常用命令格式：
+  [[cmd/]] ln -s <file> <target_link>
+
+  参数说明：
+    -s 创建一个指向文件或目录的软（符号）链接
+    -i 当目标符号链接存在时，提示是否覆盖
+    -f 当目标符号链接存在时，直接覆盖
+
+
+[[question id=52]]
+  文件 类型 [查看]
+
+[[answer]]
+  file 用于查看文件类型，命令格式：
+  [[cmd/]] file <filename>
+
+
+[[question id=61]]
+  查找 文件|目录
+
+[[answer]]
+  find 按照名称或者文件类型等查找文件或目录，常用命令格式：
+  [[cmd/]] find <filepath> -name <filename_pattern>
+  [[cmd/]] find <filepath> -type <file_type>
+
+  例如：
+    find . -name '*.txt' 查找当前目录下后缀名为 txt 的文件
+    find . -name \*.c    查找当前目录下后缀名为 c 的文件
+    find . -type f   查找当前目录下所有文件
+    find . -type d   查找当前目录下所有目录
+
+
+[[question id=62]]
+  定位 文件|目录
+
+[[answer]]
+  locate 用于定位文件或目录，命令格式：
+  [[cmd/]] locate <filename>
+  其中文件名支持通配符 * 和 ?
+
+  例如：
+    locate \*.ps 寻找以 '.ps' 结尾的文件
+
+[[answer uname=Linux]]
+  CentOS下如果没有locate这个命令，需要先安装程序包 mlocate，命令行如下：
+  [[cmd/]] yum -y install mlocate
+
+  执行 locate 命令前，通常需要先运行 updatedb
+
+
+[[question id=65]]
+  文件 位置|路径 [显示]
+  whereis
+
+[[answer]]
+  whereis 显示一个二进制文件、源码或man的位置，命令格式：
+  [[cmd/]] whereis <filename>
+
+  例如：whereis echo
+
+
+[[question id=66]]
+  可执行|二进制|程序 位置|路径 [文件]
+  which
+
+[[answer]]
+  which 显示一个二进制文件或可执行文件的完整路径，命令格式：
+  [[cmd/]] which <program>
+
+  例如：
+    which java
+    which php
+
+
+[[question id=71]]
   时间 降序 文件|目录|显示|列举|ls
 
 [[answer]]
@@ -157,7 +236,7 @@
  [[cmd required/]] ls -lt [filename]
 
 
-[[question id=60]]
+[[question id=72]]
   时间 升序 文件|目录|显示|列举|ls
 
 [[answer]]
@@ -165,7 +244,7 @@
  [[cmd required/]] ls -lrt [filename]
 
 
-[[question id=70]]
+[[question id=73]]
   文件|目录|ls 大小 降序 [显示|列举]
 
 [[answer]]
@@ -173,7 +252,7 @@
  [[cmd required/]] ls -lS [filename]
 
 
-[[question id=80]]
+[[question id=74]]
   文件|目录|ls 大小 升序 [显示|列举]
 
 [[answer]]
@@ -262,12 +341,37 @@
  增加可执行权限：
  [[cmd /]] chmod +x <filename>
 
+ 去除可执行权限：
+ [[cmd /]] chmod -x <filename>
+
  如果要对一个目录及其子目录递归执行，加上 -R 参数即可。例如：
  [[cmd /]] chmod -R 755 <filename>
 
+ 高级用法示例：
+   chmod u+s /bin/file1 设置一个二进制文件的 SUID 位 - 运行该文件的用户也被赋予和所有者同样的权限
+   chmod u-s /bin/file1 禁用一个二进制文件的 SUID位
+   chmod g+s /home/public 设置一个目录的SGID 位 - 类似SUID ，不过这是针对目录的
+   chmod g-s /home/public 禁用一个目录的 SGID 位
+   chmod o+t /home/public 设置一个文件的 STIKY 位 - 只允许合法所有人删除文件
+   chmod o-t /home/public 禁用一个目录的 STIKY 位
+
+
+[[question id=415]]
+ 修改|设置 文件|目录 用户组
+ chgrp
+
+[[answer]]
+ chgrp 改变文件的用户组，命令格式：
+ [[cmd /]] chgrp <group> <filepath>
+
+ 如果要对一个目录及其子目录递归执行，加上 -R 参数即可。例如：
+ [[cmd /]] chgrp -R <group> <filepath>
+
+ 注：chown也可以用于更改文件或目录的用户组。
+
 
 [[question id=420]]
- 修改|设置 文件|目录 所有者
+ 修改|设置 文件|目录 所有者|用户
  chown
 
 [[answer]]
@@ -277,5 +381,4 @@
 
  如果要对一个目录及其子目录递归执行，加上 -R 参数即可。例如：
  [[cmd /]] chown -R <user> <filepath>
-
 
