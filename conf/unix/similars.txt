@@ -56,3 +56,10 @@
 均值 平均值 平均数 average avg
 比较 对比 对照 compare
 差异 差别 异同 同异 不同 difference different
+个数 数目 数量 count number
+物理 physical
+逻辑 logical
+中央处理器 CPU
+内存 memory
+交换 swap
+分区 partition

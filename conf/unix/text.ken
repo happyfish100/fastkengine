@@ -82,6 +82,7 @@
 
 [[question id=60]]
  文本|内容 去重
+ report|omit repeated lines|line
  uniq
 
 [[answer]]
