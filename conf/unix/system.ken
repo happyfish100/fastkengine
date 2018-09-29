@@ -1,6 +1,21 @@
 
 [[base id=1104000000]]
 
+[[question id=5]]
+ 系统 信息
+
+[[answer]]
+ 查看操作系统版本等：uname
+ 显示机器的处理器架构：arch
+ 显示系统日期：date
+[[answer uname=Linux]]
+ 查看内存情况：free
+
+[[answer uname=Darwin]]
+ 查看内存情况：
+ [[cmd/]] sysctl -a | egrep 'memory|memsize|swap'
+
+
 [[question id=10]]
  CPU
 
@@ -89,4 +104,51 @@
 
 [[answer uname=Darwin]]
  [[cmd/]] sysctl -n vm.swapusage
+
+
+[[question id=40]]
+ 操作系统|系统 名称|类型|什么
+ uname
+
+[[answer]]
+ uname输出操作系统名称和版本等信息。
+   uname 输出操作系统名称，如Linux
+   uname -a 显示完整的名称和版本等信息
+   uname -m 显示机器的处理器架构
+   uname -r 显示内核版本
+
+
+[[question id=45]]
+ 处理器 架构
+ arch
+
+[[answer]]
+ arch 输出处理器架构，也可以使用：
+ [[cmd/]] uname -m
+
+
+[[question id=50]]
+ 日期
+
+[[answer]]
+ date 用于显示和设置系统日期和时间，常用命令如下：
+
+ 显示当前Unix时间戳：
+ [[cmd/]] date +%s
+
+ 将Unix时间戳转换为日期时间格式：
+[[answer uname=Linux]]
+ [[cmd/]] date -d @<timestamp>
+ 例如：date -d @1538185177
+
+[[answer uname=Darwin]]
+ [[cmd/]] date -r <timestamp>
+ 例如：date -r 1538185177
+
+[[answer]]
+ 设置日期和时间：
+ [[cmd/]] date [mm][dd][HH]MM[cc][yy][.ss]
+ 日期格式为：月日时分年.秒
+ 例如： date 092917002018
+
 

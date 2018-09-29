@@ -33,8 +33,9 @@
 符号链接  symbol-link symbolic-link
 软链接 soft-link
 硬链接 物理链接 hard-link
-类型 type
+类型 型号 type
 信息 information info
+情况 状况 状态 status situation
 程序 脚本 命令 程式 program
 可执行 可运行 runable executable
 二进制 binary
@@ -59,7 +60,12 @@
 个数 数目 数量 count number
 物理 physical
 逻辑 logical
-中央处理器 CPU
+中央处理器 处理器 CPU processor
 内存 memory
 交换 swap
 分区 partition
+系统 system
+操作系统 OS (operating system)
+名称 名字 name
+架构 构架 框架 architecture framework
+什么 啥 东东 what
