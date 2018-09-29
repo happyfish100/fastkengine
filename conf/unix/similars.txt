@@ -77,4 +77,9 @@
 磁盘 硬盘 disk
 挂载 装载 装入 挂接 mount (mount point)
 空间 容量 space
-占用 使用 用到 occupy
+占用 占有 使用 用到 occupy
+负载 负荷 load
+时长 多长 多久 duration (how long)
+运行 run
+启动 开机 (start up)
+登录 登陆 login
