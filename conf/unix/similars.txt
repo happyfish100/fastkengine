@@ -96,3 +96,15 @@ vi vim
 格式 样式 style
 粘贴 张贴 贴上 贴下 paste
 错乱 杂乱 混乱 凌乱 disorder
+网络 network
+本机 (local host)
+主机 服务器 机器 host server machine
+网卡 (network card) (net interface) (network interface)
+参数 parameter
+主机名 (host name)
+域名 (domain name)
+解析 resolve resolution
+侦听 listen
+端口 port
+已建立 已经建立 established
+连接 connection

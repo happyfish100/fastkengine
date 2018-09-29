@@ -1,0 +1,109 @@
+
+[[base id=1112000000]]
+
+[[question id=10]]
+ 网络
+
+[[answer]]
+ 网络相关命令：
+   ifconfig：显示网卡配置
+   hostname：显示或设置本机的主机名
+   nslookup、dig 和 host：域名/主机解析
+   netstat：显示网络状态
+
+
+[[question id=20]]
+ 本机|主机 IP
+
+[[answer]]
+ 查看本机所有IP：
+ [[cmd/]] ifconfig -a | grep inet
+
+ 查看本机IPv4 IP：
+ [[cmd/]] ifconfig -a | grep -w inet
+
+ 查看本机IPv6 IP：
+ [[cmd/]] ifconfig -a | grep -w inet6
+
+
+[[question id=30]]
+ 网卡 配置|参数
+ ifconfig
+
+[[answer]]
+ ifconfig 显示网卡参数，常用格式：
+ 显示所有网络接口：
+ [[cmd/]] ifconfig -a
+
+ 显示指定网络接口：
+ [[cmd/]] ifconfig <interface>
+[[answer uname=Linux]]
+ 例如：ifconfig eth0
+
+[[answer uname=Darwin]]
+ 例如：ifconfig en0
+
+
+[[question id=40]]
+ 主机名
+ 主机 名称
+
+[[answer]]
+ hostname 显示或设置本机的主机名。不带参数显示本机主机名，带参数设置主机名，格式为：
+ [[cmd/]] hostname [new_hostname]
+
+
+[[question id=50]]
+ 域名|主机 解析
+
+[[answer]]
+  nslookup、dig 和 host 均可做域名/主机解析。命令格式：
+  [[cmd/]] nslookup <domain>
+  [[cmd/]] dig <domain>
+  [[cmd/]] host <domain>
+
+  例如： host www.fastken.com
+
+[[answer osname=CentOS]]
+  如果 dig 命令不存在，需要安装包 bind-utils，安装命令如下：
+  [[cmd/]] yum install bind-utils -y
+
+
+[[question id=60]]
+ 网络 状态|统计
+ netstat
+ ss
+
+[[answer]]
+ netstat 显示网络状态。常用命令格式：
+ [[cmd/]] netstat -an 
+
+[[answer uname=Linux]]
+ ss 比 netstat 效率更高，推荐使用ss。
+ [[cmd/]] ss -an
+
+
+[[question id=62]]
+ 侦听|等待连接 端口
+
+[[answer]]
+ [[cmd/]] netstat -an | grep LISTEN | grep tcp
+
+[[answer uname=Linux]]
+ ss 比 netstat 效率更高，推荐使用ss。
+ [[cmd/]] ss -an | grep LISTEN | grep tcp
+
+
+[[question id=63]]
+ 已建立 连接
+ 连接 端口
+
+[[answer]]
+ 查看指定端口（如80端口）已建立连接：
+ [[cmd/]] netstat -an | grep -w 80 | grep ESTABLISHED | grep tcp
+
+[[answer uname=Linux]]
+ ss 比 netstat 效率更高，推荐使用ss。
+ [[cmd/]] ss -an | grep -w 80 | grep ESTAB | grep tcp
+
+
