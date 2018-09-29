@@ -1,0 +1,50 @@
+
+[[base id=1105000000]]
+
+[[question id=10]]
+ 进程|线程
+
+[[answer]]
+ 查看进程列表，加上特定选项可以列出线程：ps
+ 定时刷新进程状态：top
+
+
+[[question id=20]]
+ 进程|线程 列表|显示
+ ps
+
+[[answer]]
+ ps 查看进程状态，常见命令格式：
+ [[cmd/]] ps -elf
+ [[cmd/]] ps aux
+
+ 显示线程选项：
+[[answer uname=Linux]]
+   -T，-L 或者 H，例如：
+   ps aux -L
+   ps aux -T
+   ps auxH
+
+[[answer uname=Darwin]]
+   -M，例如：
+   ps aux -M
+
+
+[[question id=30]]
+ 进程|线程 滚动|刷新|更新|定期
+ top
+
+[[answer]]
+ top 用于滚动显示进程信息，常见选项说明：
+[[answer uname=Linux]]
+    -d delay seconds
+    -n max：显示的最大进程数
+    -u|U user id or name
+    -p pid
+
+[[answer uname=Darwin]]
+    -s delay seconds
+    -n nprocs：显示的最大进程数
+    -pid process id
+    -user username
+

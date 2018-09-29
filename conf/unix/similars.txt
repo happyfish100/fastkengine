@@ -21,7 +21,7 @@
 结束 终结 terminate termination
 主人 拥有者 所有者 owner
 权限 权利 privilege
-修改 改变 更改 change modify
+修改 改变 更改 更新 change modify update
 增加 加上 追加 add append
 工作 work
 当前 现在 目前 current
@@ -69,3 +69,12 @@
 名称 名字 name
 架构 构架 框架 architecture framework
 什么 啥 东东 what
+进程 process
+线程 thread
+刷新 refresh
+滚动 roll
+定期 定时 按时 周期 periodicity
+磁盘 硬盘 disk
+挂载 装载 装入 挂接 mount (mount point)
+空间 容量 space
+占用 使用 用到 occupy
