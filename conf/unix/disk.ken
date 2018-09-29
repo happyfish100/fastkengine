@@ -11,6 +11,8 @@
  估算目录 filepath 已使用的磁盘空间
  [[cmd/]] du -sh <filepath> 
 
+ 磁盘IO统计：iostat
+
  磁盘分区管理：fdisk
  挂载磁盘分区/文件系统: mount
  卸载磁盘分区/文件系统: umount
@@ -55,4 +57,38 @@
    -m 以MB容量显示文件系统
    -k 以KB容量显示文件系统
 
+
+[[question id=40]]
+ 磁盘 IO
+ CPU 使用率
+ IO 统计|情况|信息
+ iostat
+
+[[answer]]
+ iostat 用于统计磁盘IO和CPU使用率等信息，命令格式：
+[[answer uname=Linux]]
+ [[cmd/]] iostat [options] [interval] [count]
+
+ 例如：iostat -x 5
+
+ 常用选项说明：
+   -x  显示扩展统计信息，通常会加上此选项
+   -k  设置流量单位 KB/s
+   -m  设置流量单位 MB/s
+
+ 显示设备sda和sdb的统计信息，间隔为2秒，执行10次：
+   iostat -x sda sdb 2 10
+
+ 显示设备sda及其分区（如sda1）的统计信息，间隔为2秒，执行10次：
+   iostat -x -p sda 2 10
+
+[[answer uname=Darwin]]
+ [[cmd/]] iostat [-CUdKIoT?] [-c count] [-n devs] [-w wait] [drives]
+
+ 例如：iostat -w 5
+
+ 常用选项说明：
+   -c count  执行次数
+   -w wait   统计时间间隔，单位为秒
+   -n devs   显示的最大设备数
 
