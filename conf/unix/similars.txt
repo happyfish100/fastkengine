@@ -2,7 +2,7 @@
 目录 directory dir
 路径 途径 path
 时间 日期 time date datetime
-显示 展示 查看 show
+显示 展示 查看 浏览 show
 输出 打印 output print echo
 查找 找出 找到 查到 发现 find
 列举 列出 排列 列表 罗列 list
@@ -121,3 +121,8 @@ vi vim
 乱码 (messy code)
 中文 汉语 汉字 chinese
 没 not
+打包 封包 pack
+拆包 解包 unpack
+压缩 压紧 精简 compress
+解压 减压 decompress
+打开 open

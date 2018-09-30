@@ -1,0 +1,95 @@
+
+[[base id=1140000000]]
+
+[[question id=10]]
+ 打包|解包 文件
+ tar
+
+[[answer]]
+ 创建一个非压缩的 tar文件
+ [[cmd/]] tar -cf archive.tar <filepath>
+
+ 创建一个gzip格式压缩的 tar文件
+ [[cmd/]] tar -czf archive.tar.gz <filepath>
+
+ 创建一个bzip2格式的压缩包
+ [[cmd/]] tar -cjf archive.tar.bz2 <filepath>
+
+ 释放一个tar文件
+ [[cmd/]] tar -xf archive.tar 
+
+ 释放/解压一个gzip格式的压缩包
+ [[cmd/]] tar -xzf archive.tar.gz 
+
+
+[[question id=20]]
+ 压缩|解压 文件
+ gzip
+ gunzip
+ bzip2
+ bunzip2
+ zip
+ unzip
+
+[[answer]]
+ 用gzip 压缩文件
+ [[cmd/]] gzip <filename>
+
+ 解压gz后缀的文件
+ [[cmd/]] gunzip <filename.gz>
+ 或者：
+ [[cmd/]] gzip -d <filename.gz>
+
+ 用 bzip2 压缩文件
+ [[cmd/]] bzip2 <filename>
+
+ 解压bz2后缀的文件
+ [[cmd/]] bunzip2 <filename.bz2>
+ 或者：
+ [[cmd/]] bzip2 -d <filename.bz2>
+
+ 用 zip 压缩文件
+ [[cmd/]] zip <filename>
+
+ 将几个文件和目录同时压缩成一个zip格式的压缩包
+ [[cmd/]] zip -r file1.zip <file1> [file2] [dir1] 
+
+ 解压zip后缀的文件
+ [[cmd/]] unzip <filename.zip>
+
+[[answer osname=CentOS]]
+ 如果zip 和 unzip 命令不存在，用如下命令安装：
+ [[cmd/]] yum -y install zip unzip
+
+[[answer osname=Ubuntu]]
+ 如果zip 和 unzip 命令不存在，用如下命令安装：
+ apt-get -y install zip unzip
+
+
+[[question id=30]]
+ 解压|打开|查看|处理 bz2
+
+[[answer]]
+ 使用 bunzip2解压 bz2后缀文件：
+ [[cmd/]] bunzip2 <filename.bz2>
+ 或者：
+ [[cmd/]] bzip2 -d <filename.bz2>
+
+
+[[question id=40]]
+ 解压|打开|查看|处理 gz
+
+[[answer]]
+ 使用 gunzip解压 gz后缀文件：
+ [[cmd/]] gunzip <filename.gz>
+ 或者：
+ [[cmd/]] gzip -d <filename.gz>
+
+
+[[question id=50]]
+ 解压|打开|查看|处理 zip
+
+[[answer]]
+ 使用 unzip解压 zip后缀文件：
+ [[cmd/]] unzip <filename.zip>
+
