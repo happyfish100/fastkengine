@@ -108,3 +108,7 @@ vi vim
 端口 port
 已建立 已经建立 established
 连接 connection
+内核 kernel
+帮助 帮忙 求助 跪求 help
+手册 指南 指导 指引 向导 引导 manual
+助手 帮手 helper assistant

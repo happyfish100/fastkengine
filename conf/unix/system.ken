@@ -7,6 +7,8 @@
 [[answer]]
  查看操作系统版本等：uname
  显示机器的处理器架构：arch
+ 显示和设置内核参数：sysctl
+ 查看帮助文档：man
  显示系统日期：date
  系统运行情况：uptime 和 w
 [[answer uname=Linux]]
@@ -172,4 +174,42 @@
  w 主要用于显示登录到系统中用户列表，并显示这些用户正在做什么事情。
  [[cmd/]] w
 
+
+[[question id=100]]
+ 显示|输出|设置 内核|系统 [参数]
+ sysctl
+
+[[answer]]
+ sysctl 用于显示和设置内核参数。常用格式：
+ 显示所有内核参数：
+ [[cmd/]] sysctl -a
+
+ 显示指定的内核参数：
+ [[cmd/]] sysctl <name1> [name2] ...
+
+ 设置内核参数：
+ [[cmd/]] sysctl -w <name>=<value>
+
+
+[[question id=200]]
+ 帮助|助手|手册
+ man
+
+[[answer]]
+ man 显示帮助文档。常用命令格式：
+ [[cmd/]] man [section] name
+
+ 例如：
+   man sysctl
+   man 2 write
+
+ section列表：
+   1 - commands：命令
+   2 - system calls ：系统调用，内核提供的C函数
+   3 - library calls：库函数，通常是C库函数
+   4 - special files：特殊文件，通常是 /dev下的文件
+   5 - file formats and convertions：文件格式
+   6 - games：游戏相关
+   7 - macro packages and conventions：杂项
+   8 - system management commands：系统管理命令
 
