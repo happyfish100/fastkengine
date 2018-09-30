@@ -13,7 +13,7 @@
 大小 尺寸 size
 位置 地方 哪儿 哪里 那儿 那里 定位 position  location locate place
 设置 设定 配置 set setting config configure configuration
-删除 移除 delete remove
+删除 移除 去除 去掉 delete remove
 创建 建立 create
 内容 正文 content
 开始 起始 开头 start
@@ -112,3 +112,11 @@ vi vim
 帮助 帮忙 求助 跪求 help
 手册 指南 指导 指引 向导 引导 manual
 助手 帮手 helper assistant
+环境 environment
+变量 variable
+取消 撤销 cancel
+语言 语种 language
+时区 (time zone)
+不对 不正确 有误 有错 错误 wrong
+乱码 (messy code)
+中文 汉语 汉字 chinese

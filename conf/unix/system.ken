@@ -199,9 +199,12 @@
  man 显示帮助文档。常用命令格式：
  [[cmd/]] man [section] name
 
+ 如果name在多个section中出现，不带section，会显示最小section中的内容。
+ 例如：man write 将显示write命令的帮助文档，而不是系统调用的。
+
  例如：
    man sysctl
-   man 2 write
+   man 2 write 显示系统调用的write函数手册
 
  section列表：
    1 - commands：命令
