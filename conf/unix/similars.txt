@@ -74,7 +74,7 @@
 刷新 refresh
 滚动 roll
 定期 定时 按时 周期 periodicity
-磁盘 硬盘 SCSI IDE SSD SATA SAS disk
+磁盘 硬盘 U盘 SCSI IDE SSD SATA SAS disk
 挂载 装载 装入 挂接 mount (mount point)
 空间 容量 space
 占用 占有 使用 用到 occupy

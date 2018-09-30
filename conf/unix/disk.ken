@@ -59,7 +59,7 @@
 
 
 [[question id=40]]
- 磁盘 IO
+ 磁盘 IO|流量|统计
  CPU 使用率
  IO 统计|情况|信息
  iostat
