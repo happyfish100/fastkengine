@@ -216,3 +216,9 @@
    7 - macro packages and conventions：杂项
    8 - system management commands：系统管理命令
 
+ 使用man打开帮助手册，里面很多操作与vi编辑器类似：
+   上下翻页：最常用的是使用空格键向下翻页。另外，[Page Up] 可以向上翻页，[Page Down]也可以实现向下翻页，[Home]返回首页，[End]返回末页。
+   上下/按行移动：使用键盘方向键进行上下移动，或者使用j键往下移动， k键向上移动。
+   查找：使用/string向下搜索string关键字，?string向上搜索string关键字。n键继续关键字的下一个搜索，N键反向搜索关键字。
+   退出：q键退出当前帮助手册。
+

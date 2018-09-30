@@ -4,7 +4,7 @@
 时间 日期 time date datetime
 显示 展示 查看 show
 输出 打印 output print echo
-查找 找出 找到 find
+查找 找出 找到 查到 发现 find
 列举 列出 排列 列表 罗列 list
 降序 倒序 倒排 descending descend desc
 升序 正序 顺序 ascending ascend asc
@@ -120,3 +120,4 @@ vi vim
 不对 不正确 有误 有错 错误 wrong
 乱码 (messy code)
 中文 汉语 汉字 chinese
+没 not
