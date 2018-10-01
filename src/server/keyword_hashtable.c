@@ -97,6 +97,10 @@ static KeywordHashEntry *hashtable_insert(KeywordHashtableContext *context,
         }
     }
 
+    if (similar->len > 0) {
+        context->keyword_count++;
+    }
+
     hash_code = simple_hash(ch->str, ch->len);
     index = hash_code % htable->capacity;
     hentry->next = htable->buckets[index];
@@ -393,6 +397,7 @@ int keyword_hashtable_init(KeywordHashtableContext *context, const int capacity,
 {
     int result;
 
+    context->keyword_count = 0;
     context->top_capacity = capacity;
     context->top = NULL;
     if ((result=fast_mblock_init_ex(&context->hentry_allocator,

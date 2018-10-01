@@ -169,9 +169,14 @@ int kengine_load_config_and_data(const char *filename)
     result = kengine_load_data(&total_file_count);
 
     sprintf(config_str, "data_path=%s, question_index_hashtable_buckets=%d, "
-            "keyword_trie_top_hashtable_buckets=%d, kbase file count: %d",
-            g_server_vars.data_path, g_server_vars.question_index_hashtable_buckets,
-            g_server_vars.keyword_trie_top_hashtable_buckets, total_file_count);
+            "keyword_trie_top_hashtable_buckets=%d, kbase file count: %d, "
+            "keyword_hashable_count: %d, keyword_count: %d, "
+            "question_index_count: %d", g_server_vars.data_path,
+            g_server_vars.question_index_hashtable_buckets,
+            g_server_vars.keyword_trie_top_hashtable_buckets, total_file_count,
+            keyword_hashtable_count(&g_server_vars.kh_context),
+            g_server_vars.kh_context.keyword_count,
+            question_index_count(&g_server_vars.ki_context));
     sf_log_config_ex(config_str);
 
     return result;

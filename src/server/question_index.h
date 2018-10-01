@@ -53,6 +53,11 @@ extern "C" {
 
     int question_index_key_length(const KeywordArray *keywords);
 
+    static inline int question_index_count(KeywordIndexContext *context)
+    {
+        return context->hentry_allocator.info.element_used_count;
+    }
+
 #ifdef __cplusplus
 }
 #endif

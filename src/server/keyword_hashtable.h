@@ -36,6 +36,7 @@ typedef struct keyword_hashtable {
 typedef struct keyword_hashtable_context {
     KeywordHashtable *top;
     int top_capacity;
+    int keyword_count;
     struct fast_mblock_man htable_allocator;
     struct fast_mblock_man hentry_allocator;
     struct fast_mpool_man  string_allocator;
@@ -78,6 +79,11 @@ extern "C" {
             const KeywordArray *keywords);
 
     void keyword_hashtable_destroy(KeywordHashtableContext *context);
+
+    static inline int keyword_hashtable_count(KeywordHashtableContext *context)
+    {
+        return context->htable_allocator.info.element_used_count;
+    }
 
 #ifdef __cplusplus
 }
