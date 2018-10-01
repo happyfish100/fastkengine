@@ -14,7 +14,7 @@
 位置 地方 哪儿 哪里 那儿 那里 定位 position  location locate place
 设置 设定 配置 set setting config configure configuration
 删除 移除 去除 去掉 delete remove
-创建 建立 create
+创建 创立 新建 建立 设立 create
 内容 正文 content
 开始 起始 开头 start
 尾部 结尾 末尾 尾巴 end
@@ -22,7 +22,7 @@
 主人 拥有者 所有者 owner
 权限 权利 privilege
 修改 改变 更改 更新 change modify update
-增加 加上 追加 add append
+增加 添加 新加 加上 追加 add append
 工作 work
 当前 现在 目前 current
 只 仅 just
@@ -40,7 +40,9 @@
 可执行 可运行 runable executable
 二进制 binary
 用户组 分组 群组 group
-用户 user
+用户 账号 user
+身份 identity
+密码 口令 password
 字符集 charset
 编码 encoding
 转换 转变 切换 convert
@@ -80,7 +82,7 @@
 占用 占有 使用 用到 occupy
 负载 负荷 load
 时长 多长 多久 duration (how long)
-运行 run
+运行 执行 run
 启动 开机 (start up)
 登录 登陆 login
 统计 汇总 statistics
@@ -126,3 +128,4 @@ vi vim
 压缩 压紧 精简 compress
 解压 减压 decompress
 打开 open
+预设 presupposition

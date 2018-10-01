@@ -1,0 +1,201 @@
+
+[[base id=1150000000]]
+
+[[question id=10]]
+ 用户
+ 用户组
+
+[[answer uname=Linux]]
+ groupadd group_name 创建一个新用户组
+ groupdel group_name 删除一个用户组
+ groupmod -n new_group_name old_group_name 重命名一个用户组
+ useradd -c "Name Surname " -g admin -d /home/user1 -s /bin/bash user1 创建一个属于 "admin" 用户组的用户
+ useradd user1 创建一个新用户
+ userdel -r user1 删除一个用户 ( '-r' 排除主目录)
+ usermod -c "User FTP" -g system -d /ftp/user1 -s /bin/nologin user1 修改用户属性
+ passwd 修改口令
+ passwd user1 修改一个用户的口令 (只允许root执行)
+
+[[answer uname=Darwin]]
+ 查看用户ID
+ dscl . -list /Users UniqueID
+
+ 查看用户所属组ID
+ dscl . -read /Users/root PrimaryGroupID
+
+ 查看各组ID
+ dscl . -list /Groups PrimaryGroupID
+
+ 查看组中的用户
+ dscl . -read /Groups/admin GroupMembership
+
+ 创建用户 "luser":
+ dscl . -create /Users/luser
+ dscl . -create /Users/luser UserShell /bin/bash
+ dscl . -create /Users/luser RealName "Lucius Q. User"
+
+ # 注意 UniqueID必须唯一
+ dscl . -create /Users/luser UniqueID "1010"
+ dscl . -create /Users/luser PrimaryGroupID 80
+ dscl . -create /Users/luser NFSHomeDirectory /Users/luser
+
+ 修改密码
+ dscl . -passwd /Users/luser password
+
+ 加入admin用户组
+ dscl . -append /Groups/admin GroupMembership luser
+
+ 从组中删除用户
+ dscl . -delete /Groups/groupname GroupMembership username
+
+[[answer]]
+ id 显示用户信息
+ newgrp group_name 设置一个新的用户组以改变新创建文件的预设用户组
+ 
+
+[[question id=20]]
+ 添加|创建 用户组|组
+ (group add)
+
+[[answer]]
+ 创建用户组:
+[[answer uname=Linux]]
+ [[cmd/]] groupadd <group_name>
+
+[[answer uname=Darwin]]
+ [[cmd/]] dscl . -create /Groups/<group_name>
+
+
+[[question id=25]]
+ 删除 用户组|组
+ (group del)
+
+[[answer]]
+ 删除用户组:
+[[answer uname=Linux]]
+ [[cmd/]] groupdel <group_name>
+
+[[answer uname=Darwin]]
+ [[cmd/]] dscl . -delete /Groups/<group_name>
+
+
+[[question id=28]]
+ 修改|重命名 用户组|组
+ (group mod)
+
+[[answer uname=Linux]]
+ 重命名用户组:
+ [[cmd/]] groupmod -n <new_group_name> <old_group_name>
+
+
+[[question id=30]]
+ 添加|创建 用户
+ (user add)
+
+[[answer]]
+ 创建用户:
+[[answer uname=Linux]]
+ [[cmd/]] useradd [options] <username>
+ 选项如下：
+   -c <备注>     修改用户帐号的备注文字
+   -d <登入目录> 修改用户登入时的目录
+   -e <有效期限> 修改帐号的有效期限
+   -f <缓冲天数> 修改在密码过期后多少天关闭该帐号
+   -g <用户组> 　修改用户所属的主用户组
+   -G <用户组> 　修改用户所属的附加用户组（一个用户可以属于多个附加用户组）
+   -l <帐号名称> 修改用户帐号名称
+   -L 　         锁定用户密码，使密码无效
+   -s <shell> 　 修改用户登入后所使用的shell，如：/bin/bash
+   -u <uid> 　   修改用户ID
+   -U 　         解除密码锁定
+
+ 例如： useradd -c "Surname" -g admin -d /home/user1 -s /bin/bash user1
+ 创建一个属于 admin 用户组的用户user1
+
+
+[[answer uname=Darwin]]
+ [[cmd/]] dscl . -create /Users/<username> UserShell /bin/bash
+
+
+[[question id=35]]
+ 删除 用户
+ (user del)
+
+[[answer]]
+ 删除用户:
+[[answer uname=Linux]]
+ [[cmd/]] userdel <username>
+
+[[answer uname=Darwin]]
+ [[cmd/]] dscl . -delete /Users/<username>
+
+
+[[question id=38]]
+ 修改 用户
+ (user mod)
+
+[[answer]]
+ 修改用户:
+[[answer uname=Linux]]
+ [[cmd/]] usermod <options> <username>
+ 选项如下：
+   -c <备注>     修改用户帐号的备注文字
+   -d <登入目录> 修改用户登入时的目录
+   -e <有效期限> 修改帐号的有效期限
+   -f <缓冲天数> 修改在密码过期后多少天关闭该帐号
+   -g <用户组> 　修改用户所属的主用户组
+   -G <用户组> 　修改用户所属的附加用户组（一个用户可以属于多个附加用户组）
+   -l <帐号名称> 修改用户帐号名称
+   -L 　         锁定用户密码，使密码无效
+   -s <shell> 　 修改用户登入后所使用的shell，如：/bin/bash
+   -u <uid> 　   修改用户ID
+   -U 　         解除密码锁定
+
+ 例如：
+  usermod -c "User FTP" -g system -d /ftp/user1 -s /bin/nologin user1
+
+[[answer uname=Darwin]]
+ [[cmd/]] dscl . -change /Users/<username> <key> <old_value> <new_value>
+
+ 例如：dscl . -change /Users/user1 UserShell /bin/sh /bin/bash
+
+
+[[question id=40]]
+ 修改 密码 [用户]
+ passwd
+
+[[answer]]
+ 修改用户密码:
+[[answer uname=Linux]]
+ [[cmd/]] passwd [username]
+
+ root用户才可以修改其他用户的密码，命令格式：
+ [[cmd/]] passwd <username>
+
+[[answer uname=Darwin]]
+ [[cmd/]] dscl . -passwd /Users/<username> [<new password> | <old password> <new password>]
+
+
+[[question id=50]]
+ 用户 信息|身份
+ id
+
+[[answer]]
+ id 显示用户信息，命令格式:
+ [[cmd/]] id [options] [user]
+ 不指定用户时， 显示当前用户信息。
+
+ 常用选项如下：
+   -g  显示用户所属的主用户组
+   -G  显示用户所属的附加用户组（一个用户可以属于多个附加用户组）
+   -u  显示用户ID
+
+
+[[question id=60]]
+ 设置|预设 用户组|组
+ newgrp
+
+[[answer]]
+ 设置一个新的用户组以改变新创建文件的预设用户组，命令格式:
+ [[cmd/]] newgrp <group_name>
+
