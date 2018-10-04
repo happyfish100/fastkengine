@@ -36,10 +36,10 @@ int server_handler_destroy()
     return 0;
 }
 
-static int parse_answer_conditions(struct fast_task_info *task,
+static int parse_answer_vars(struct fast_task_info *task,
         const FKENRequestInfo *request, FKENResponseInfo *response,
         const int kv_count, string_t *question,
-        AnswerConditionArray *conditions)
+        key_value_array_t *vars)
 {
     int i;
     int current_body_len;
@@ -50,7 +50,7 @@ static int parse_answer_conditions(struct fast_task_info *task,
     p = question->str + question->len;
     current_body_len = p - (task->data + sizeof(FKENProtoHeader));
 
-    kv_pair = conditions->kv_pairs;
+    kv_pair = vars->kv_pairs;
     for (i=0; i<kv_count; i++) {
         current_body_len += sizeof(FKENProtoQuestionSearchKVEntry);
         if (request->body_len < current_body_len) {
@@ -89,7 +89,7 @@ static int parse_answer_conditions(struct fast_task_info *task,
                 request->body_len, current_body_len);
         return EINVAL;
     }
-    conditions->count = kv_count;
+    vars->count = kv_count;
     return 0;
 }
 
@@ -143,7 +143,7 @@ static int fken_proto_deal_question_search(struct fast_task_info *task,
     int result;
     FKENProtoQuestionSearchReqHeader *req_header;
     key_value_pair_t kv_pairs[FKEN_MAX_CONDITION_COUNT];
-    AnswerConditionArray conditions;
+    key_value_array_t vars;
     QASearchResultArray results;
     string_t question;
     int kv_count;
@@ -171,14 +171,14 @@ static int fken_proto_deal_question_search(struct fast_task_info *task,
     }
     question.str = req_header->question;
 
-    conditions.kv_pairs = kv_pairs;
-    if ((result=parse_answer_conditions(task, request, response,
-                    kv_count, &question, &conditions)) != 0)
+    vars.kv_pairs = kv_pairs;
+    if ((result=parse_answer_vars(task, request, response,
+                    kv_count, &question, &vars)) != 0)
     {
         return result;
     }
 
-    if ((result=question_search(&question, &conditions, &results)) != 0) {
+    if ((result=question_search(&question, &vars, &results)) != 0) {
         if (result != ENOENT) {
             return result;
         }

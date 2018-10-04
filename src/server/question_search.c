@@ -208,8 +208,34 @@ static int question_search_all(KeywordRecords *records, QAArray *results)
     return done_count;
 }
 
-static bool match_answer_conditions(const AnswerConditionArray *vars,
-        const AnswerConditionArray *conditions)
+static int var_in_conditions(const key_value_pair_t *var,
+        const ConditionEntry *condition)
+{
+    int result;
+    int i;
+
+    if ((result=fc_string_compare(&var->key, &condition->key)) != 0) {
+        return result;
+    }
+
+    if (condition->values.count == 1) {
+        return fc_string_compare(&var->value, &condition->values.strings[0]);
+    }
+
+    result = 1;
+    for (i=0; i<condition->values.count; i++) {
+        if ((result=fc_string_compare(&var->value,
+                        &condition->values.strings[i])) == 0)
+        {
+            break;
+        }
+    }
+
+    return result;
+}
+
+static bool match_answer_conditions(const key_value_array_t *vars,
+        const ConditionArray *conditions)
 {
     key_value_pair_t *kv;
     key_value_pair_t *kv_end;
@@ -225,7 +251,7 @@ static bool match_answer_conditions(const AnswerConditionArray *vars,
     kv_end = vars->kv_pairs + vars->count;
     for (i=0; i<conditions->count; i++) {
         for (kv=vars->kv_pairs; kv<kv_end; kv++) {
-            if (compare_key_value_pair(conditions->kv_pairs + i, kv) == 0) {
+            if (var_in_conditions(kv, conditions->kv_pairs + i) == 0) {
                 break;
             }
         }
@@ -237,8 +263,8 @@ static bool match_answer_conditions(const AnswerConditionArray *vars,
     return true;
 }
 
-static int match_answers(QAArray *qa_array, const AnswerConditionArray
-        *vars, QASearchResultArray *results)
+static int match_answers(QAArray *qa_array, const key_value_array_t *vars,
+        QASearchResultArray *results)
 {
     QAEntry *p;
     QAEntry *end;
@@ -285,8 +311,8 @@ static void print_keyword_records(KeywordRecords *records)
     printf("\n");
 }
 
-int question_search(const string_t *question, const AnswerConditionArray
-        *vars, QASearchResultArray *results)
+int question_search(const string_t *question, const key_value_array_t *vars,
+        QASearchResultArray *results)
 {
     int result;
     WordSegmentArray ws_out;

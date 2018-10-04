@@ -13,6 +13,9 @@
 #define MAX_KEYWORDS_COUNT    5
 #define MAX_KEYWORDS_ROWS    (4 * MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
 
+#define CONDITION_OPERATOR_EQ 1
+#define CONDITION_OPERATOR_IN 2
+
 typedef struct keyword_array {
     string_t keywords[MAX_KEYWORDS_COUNT];
     int count;
@@ -28,13 +31,19 @@ typedef struct question_entry {
     string_t q;   //multi keywords splited by seperator
 } QuestionEntry;
 
-typedef struct answer_condition_array {
-    key_value_pair_t *kv_pairs;
+typedef struct condition_entry {
+    int op_type;
+    string_t key;
+    string_array_t values;
+} ConditionEntry;
+
+typedef struct condition_array {
+    ConditionEntry *kv_pairs;
     int count;
-} AnswerConditionArray;
+} ConditionArray;
 
 typedef struct condition_answer_entry {
-    AnswerConditionArray conditions;
+    ConditionArray conditions;
     string_t answer;
 } ConditionAnswerEntry;
 
