@@ -29,7 +29,7 @@
 #define ATTRIBUTE_ID_STR   "id"
 #define ATTRIBUTE_ID_LEN   (sizeof(ATTRIBUTE_ID_STR) - 1)
 
-#define FUNC_IN_STR       "in"
+#define FUNC_IN_STR       "IN"
 #define FUNC_IN_LEN       (sizeof(FUNC_IN_STR) - 1)
 
 typedef struct {
@@ -1024,14 +1024,98 @@ static int qa_reader_combine_answer(QAReaderContext *context,
     return 0;
 }
 
-static int qa_reader_parse_func_params(string_t *params,
-        ConditionEntry *condition, string_t **values)
+static int qa_reader_parse_func_params(QAReaderContext *context,
+        string_t *params, ConditionEntry *condition, string_t **values)
 {
-    return 0;
+    char *p;
+    char *end;
+    char quote_ch;
+    string_t *value;
+    int result;
+
+    result = 0;
+    condition->values.count = 0;
+    condition->values.strings = *values;
+    end = params->str + params->len;
+    p = params->str;
+    while (p < end) {
+        while (p < end && (*p == ' ' || *p == '\t')) {
+            p++;
+        }
+        if (p == end) {
+            break;
+        }
+
+        value = (*values)++;
+        if (*p == '"' || *p == '\'') {
+            quote_ch = *p++;
+            value->str = p;
+
+            while (p < end && (*p != quote_ch)) {
+                p++;
+            }
+            if (p == end) {
+                logError("file: "__FILE__", line: %d, "
+                        "ken filename: %s, expect closed char: %c, "
+                        "params: %.*s", __LINE__, context->filename,
+                        quote_ch, FC_PRINTF_STAR_STRING_PARAMS(*params));
+                result = EINVAL;
+                break;
+            }
+
+            value->len = p - value->str;
+            p++; //skip quote char
+            while (p < end && (*p == ' ' || *p == '\t')) {
+                p++;
+            }
+            if (p < end) {
+                if (*p != ',') {
+                    logError("file: "__FILE__", line: %d, "
+                            "ken filename: %s, expect \",\", but %c found, "
+                            "params: %.*s", __LINE__, context->filename, *p,
+                            FC_PRINTF_STAR_STRING_PARAMS(*params));
+                    result = EINVAL;
+                    break;
+                }
+                p++; //skip ,
+            }
+        } else {
+            value->str = p;
+            while (p < end && (*p != ',')) {
+                p++;
+            }
+
+            value->len = p - value->str;
+            if (p < end) {
+                p++; //skip ,
+            }
+        }
+
+        FC_STRING_TRIM(value);
+        condition->values.count++;
+        if (condition->values.count >= MAX_CONDITION_VALUES_COUNT) {
+            logError("file: "__FILE__", line: %d, "
+                    "ken filename: %s, max condition values "
+                    "exceeds: %d, params: %.*s", __LINE__,
+                    context->filename, MAX_CONDITION_VALUES_COUNT,
+                    FC_PRINTF_STAR_STRING_PARAMS(*params));
+            result = EOVERFLOW;
+            break;
+        }
+    }
+
+    /*
+    logInfo("params count: ======%d=====", condition->values.count);
+    for (int i=0; i<condition->values.count; i++) {
+       logInfo("%d. %.*s", i+1, FC_PRINTF_STAR_STRING_PARAMS(condition->values.strings[i]));
+    }
+    */
+
+    return result;
 }
 
-static int qa_reader_parse_condition(key_value_pair_t *kv,
-        ConditionEntry *condition, string_t **values)
+static int qa_reader_parse_condition(QAReaderContext *context,
+        key_value_pair_t *kv, ConditionEntry *condition, string_t **values)
 {
     string_t func_name;
     char *p;
@@ -1066,7 +1150,7 @@ static int qa_reader_parse_condition(key_value_pair_t *kv,
 
         params.str = p + 1;
         params.len = (end - 1) - params.str;
-        return qa_reader_parse_func_params(&params, condition, values);
+        return qa_reader_parse_func_params(context, &params, condition, values);
     } while (0);
 
     condition->op_type = CONDITION_OPERATOR_EQ;
@@ -1100,7 +1184,9 @@ static int qa_reader_set_answer(QAReaderContext *context,
     condition = condition_holder->kv_pairs;
     kv_end = attributes.kv_pairs + attributes.count;
     for (kv=attributes.kv_pairs; kv<kv_end; kv++) {
-        if ((result=qa_reader_parse_condition(kv, condition, &values)) != 0) {
+        if ((result=qa_reader_parse_condition(context, kv, condition,
+                        &values)) != 0)
+        {
             break;
         }
 

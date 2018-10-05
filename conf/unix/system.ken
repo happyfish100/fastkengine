@@ -33,7 +33,8 @@
 
 
 [[question id=15]]
- 物理 CPU 个数
+ 物理|核心 CPU 个数
+ CPU 核数
 
 [[answer uname=Linux]]
  [[cmd/]] cat /proc/cpuinfo | grep "physical id" | sort | uniq | wc -l
@@ -48,7 +49,7 @@
 [[answer uname=Linux]]
  [[cmd/]] cat /proc/cpuinfo | grep 'model name' | sort | uniq
 
-[[answer uname=Darwin]]
+[[answer uname="IN(Darwin,FreeBSD)"]]
  [[cmd/]] sysctl -n machdep.cpu.brand_string
 
 

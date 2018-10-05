@@ -129,3 +129,4 @@ vi vim
 解压 减压 decompress
 打开 open
 预设 presupposition
+核心 core
