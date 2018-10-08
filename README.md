@@ -28,7 +28,9 @@ FastKEngine is a knowledge engine based keywords matching.
 
   the conditions like "key1=value1 key2=value2" in the answer is optional,
   eg. [[answer]] for no additional condition. the key and value can be quoted with
-  double or single quotation marks. eg. [[answer uname="Linux"]]
+  double or single quotation marks. eg. [[answer uname="Linux"]]. value can be a
+  function like FUNC(param1, param2, ...), support functions:
+    IN(), such as: IN(Darwin,FreeBSD)
 
   the answer is composite when [[answer ...]] occurs many times after one [[question]].
 
