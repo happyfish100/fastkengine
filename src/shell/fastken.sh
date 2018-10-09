@@ -25,4 +25,4 @@ vars="uname=[[$uname]] osname=[[$osname]] major_version=[[$major_version]] minor
 question=$*
 host=www.fastken.com
 #host=39.106.8.170
-curl --data "question=[[$question]] vars=[[$vars]]" http://$host/fastken
+curl --data "question=[[$question]] vars=[[$vars]]" http://$host/fastken/search/unix

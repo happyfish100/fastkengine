@@ -27,6 +27,9 @@
 #define URI_INDEX_HTML_STR      "/index.html"
 #define URI_INDEX_HTML_LEN      (sizeof(URI_INDEX_HTML_STR) - 1)
 
+#define URI_SEARCH_UNIX_STR     "/search/unix"
+#define URI_SEARCH_UNIX_LEN     (sizeof(URI_SEARCH_UNIX_STR) - 1)
+
 typedef struct {
 	ngx_http_upstream_conf_t   upstream;
 	ngx_uint_t                 headers_hash_max_size;
@@ -171,6 +174,7 @@ static ngx_int_t get_post_content(ngx_http_request_t *r, string_t *data,
         return NGX_ERROR;
     }
 
+    *(data->str + data->len) = '\0';
     return NGX_OK;
 }
 
@@ -427,7 +431,7 @@ static void get_answer_ids_string(FKenAnswerArray *answer_array, char *buff)
     *p = '\0';
 }
 
-static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
+static void ngx_http_fastken_search_handler(ngx_http_request_t *r)
 {
 #define MAX_QUESTION_SIZE 64
 
@@ -447,7 +451,6 @@ static void ngx_http_fastken_body_handler(ngx_http_request_t *r)
 
     cont.str = content;
     cont.len = 0;
-    memset(content, 0, sizeof(content));
     if (get_post_content(r, &cont, sizeof(content)) != NGX_OK) {
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return;
@@ -516,31 +519,42 @@ static ngx_int_t ngx_http_fastken_index_handler(ngx_http_request_t *r)
 #define CONTENT_TYPE_HTML_STR   "text/html; charset=UTF-8"
 #define CONTENT_TYPE_HTML_LEN  (sizeof(CONTENT_TYPE_HTML_STR) - 1)
 
-    const char *filename = "/Users/dandan/Devel/fastkengine/src/nginx-module/template/index.html";
+    const char *filename = "/etc/fken/template/index.html";
     char *file_content;
     char *out_content;
     int64_t file_size;
 	ngx_int_t rc;
     int content_len;
     int param_count;
-    char buff[256];
+	char body[1024];
+    string_t cont;
     KeyValuePairEx params[MAX_PARAM_COUNT];
 
-    if (r->args.len >= sizeof(buff)) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                "args length: %d exceeds %d",
-                (int)r->args.len, (int)sizeof(buff));
-        return NGX_HTTP_BAD_REQUEST;
+    cont.str = body;
+    if ((r->method & NGX_HTTP_POST) != 0) {
+        cont.len = 0;
+        if (get_post_content(r, &cont, sizeof(body)) != NGX_OK) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+    } else {
+        if (r->args.len >= sizeof(body)) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                    "args length: %d exceeds %d",
+                    (int)r->args.len, (int)sizeof(body));
+            return NGX_HTTP_BAD_REQUEST;
+        }
+
+        cont.len = r->args.len;
+        memcpy(cont.str, r->args.data, cont.len);
+        *(cont.str + cont.len) = '\0';
     }
 
+    //TODO: free file content
     if (getFileContent(filename, &file_content, &file_size) != 0) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
-    memcpy(buff, r->args.data, r->args.len);
-    *(buff + r->args.len) = '\0';
-
-    param_count = http_parse_url_params(buff, r->args.len,
+    param_count = http_parse_url_params(cont.str, cont.len,
         params, MAX_PARAM_COUNT);
 
     logInfo("param_count: %d", param_count);
@@ -564,13 +578,33 @@ static ngx_int_t ngx_http_fastken_index_handler(ngx_http_request_t *r)
         return rc;
     }
 
-    return fken_send_reply_chunk(r, true,
-            out_content, content_len, false);
+    rc = fken_send_reply_chunk(r, true,
+            out_content, content_len, true);
+    free(file_content);
+    return rc;
+}
+
+static void ngx_http_fastken_index_post_handler(ngx_http_request_t *r)
+{
+    ngx_int_t rc;
+    rc = ngx_http_fastken_index_handler(r);
+    ngx_http_finalize_request(r, rc);
+}
+
+static inline ngx_int_t ngx_http_fastken_read_body(ngx_http_request_t *r,
+        ngx_http_client_body_handler_pt post_handler)
+{
+	ngx_int_t rc;
+
+    rc = ngx_http_read_client_request_body(r, post_handler);
+    if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
+        return rc;
+    }
+    return NGX_DONE;
 }
 
 static ngx_int_t ngx_http_fastken_handler(ngx_http_request_t *r)
 {
-	ngx_int_t rc;
     string_t relative_path;
 
     if (!(r->uri.len >= URI_ROOT_PATH_LEN && memcmp(r->uri.data,
@@ -583,25 +617,35 @@ static ngx_int_t ngx_http_fastken_handler(ngx_http_request_t *r)
     relative_path.str = (char *)r->uri.data + URI_ROOT_PATH_LEN;
     relative_path.len = r->uri.len - URI_ROOT_PATH_LEN;
 
-    if ((fc_string_equal2(&relative_path, URI_INDEX_HTML_STR,
-                URI_INDEX_HTML_LEN) == 0) || (relative_path.len == 0) ||
-            (fc_string_equal2(&relative_path, "/", 1) == 0))
+    if (fc_string_equal2(&relative_path, URI_INDEX_HTML_STR,
+                URI_INDEX_HTML_LEN) || (relative_path.len == 0) ||
+            fc_string_equal2(&relative_path, "/", 1))
     {
         logInfo("method: %d, uri: %.*s(HOME PAGE)", (int)r->method, (int)r->uri.len, r->uri.data);
         logInfo("method: %d, args: %.*s", (int)r->method, (int)r->args.len, r->args.data);
-        return ngx_http_fastken_index_handler(r);
+
+        if ((r->method & NGX_HTTP_POST) != 0) {
+            return ngx_http_fastken_read_body(r, ngx_http_fastken_index_post_handler);
+        } else {
+            return ngx_http_fastken_index_handler(r);
+        }
     }
+
     logInfo("uri: %.*s(%d)", (int)r->uri.len, r->uri.data, (int)r->uri.len);
 
-	if (!(r->method & (NGX_HTTP_POST))) {
-		return NGX_HTTP_NOT_ALLOWED;
-	}
+    if (fc_string_equal2(&relative_path, URI_SEARCH_UNIX_STR,
+                URI_SEARCH_UNIX_LEN))
+    {
+        if (!(r->method & (NGX_HTTP_POST))) {
+            return NGX_HTTP_NOT_ALLOWED;
+        }
 
-    rc = ngx_http_read_client_request_body(r, ngx_http_fastken_body_handler);
-    if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
-        return rc;
+        return ngx_http_fastken_read_body(r, ngx_http_fastken_search_handler);
+    } else {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                "invalid uri: %s", r->uri.data);
+        return NGX_HTTP_BAD_REQUEST;
     }
-    return NGX_DONE;
 }
 
 static char *ngx_http_fastken_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
