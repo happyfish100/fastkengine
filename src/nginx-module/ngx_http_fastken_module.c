@@ -558,8 +558,11 @@ static ngx_int_t ngx_http_fastken_index_handler(ngx_http_request_t *r)
         params, MAX_PARAM_COUNT);
 
     logInfo("param_count: %d", param_count);
-    for (int i=0; i<param_count; i++) {
-        logInfo("%s=%.*s", params[i].key, params[i].value_len, params[i].value);
+    {
+        int i;
+        for (i=0; i<param_count; i++) {
+            logInfo("%s=%.*s", params[i].key, params[i].value_len, params[i].value);
+        }
     }
 
     out_content = file_content;
@@ -608,7 +611,8 @@ static ngx_int_t ngx_http_fastken_handler(ngx_http_request_t *r)
     string_t relative_path;
 
     if (!(r->uri.len >= URI_ROOT_PATH_LEN && memcmp(r->uri.data,
-                URI_ROOT_PATH_STR, URI_ROOT_PATH_LEN) == 0)) {
+                    URI_ROOT_PATH_STR, URI_ROOT_PATH_LEN) == 0))
+    {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                 "invalid uri: %s", r->uri.data);
         return NGX_HTTP_BAD_REQUEST;
