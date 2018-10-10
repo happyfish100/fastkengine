@@ -7,6 +7,7 @@
 #include "fastcommon/shared_func.h"
 #include "fastcommon/http_func.h"
 #include "fastken/fken_client.h"
+#include "template.h"
 
 #define MAX_PARAM_COUNT  5
 
@@ -88,6 +89,8 @@ ngx_module_t  ngx_http_fastken_module = {
     NULL,                                  /* exit master */
     NGX_MODULE_V1_PADDING
 };
+
+#include "template.c"
 
 static ngx_int_t fken_send_reply_chunk(ngx_http_request_t *r,
         const bool last_buf, const char *buff, const int size,
@@ -514,17 +517,68 @@ static void ngx_http_fastken_search_handler(ngx_http_request_t *r)
     ngx_http_finalize_request(r, rc);
 }
 
-static ngx_int_t ngx_http_fastken_index_handler(ngx_http_request_t *r)
+static void fastken_copy_params_to_kv_array(const KeyValuePairEx *params,
+        const int param_count, key_value_array_t *kv_array)
+{
+    const KeyValuePairEx *p;
+    const KeyValuePairEx *end;
+    key_value_pair_t *kv;
+
+    end = params + param_count;
+    for (p=params,kv=kv_array->kv_pairs; p<end; p++,kv++) {
+        FC_SET_STRING_EX(kv->key, p->key, p->key_len);
+        FC_SET_STRING_EX(kv->value, p->value, p->value_len);
+    }
+    kv_array->count = param_count;
+}
+
+static ngx_int_t fastken_index_do(ngx_http_request_t *r,
+        const KeyValuePairEx *params, const int param_count)
 {
 #define CONTENT_TYPE_HTML_STR   "text/html; charset=UTF-8"
 #define CONTENT_TYPE_HTML_LEN  (sizeof(CONTENT_TYPE_HTML_STR) - 1)
 
-    const char *filename = "/etc/fken/template/index.html";
-    char *file_content;
-    char *out_content;
-    int64_t file_size;
 	ngx_int_t rc;
-    int content_len;
+    string_t output;
+    key_value_pair_t kvs[MAX_PARAM_COUNT + 1];
+    key_value_array_t kv_array;
+
+
+    logInfo("param_count: %d", param_count);
+    {
+        int i;
+        for (i=0; i<param_count; i++) {
+            logInfo("%s=%.*s", params[i].key, params[i].value_len, params[i].value);
+        }
+    }
+
+    kv_array.kv_pairs = kvs;
+    fastken_copy_params_to_kv_array(params, param_count, &kv_array);
+
+    if (render_index_template(r, &kv_array, &output) != 0) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    r->headers_out.content_type.len = CONTENT_TYPE_HTML_LEN;
+    r->headers_out.content_type.data = (u_char *)CONTENT_TYPE_HTML_STR;
+    r->headers_out.content_length_n = output.len;
+    r->headers_out.status = NGX_HTTP_OK;
+
+    ngx_http_set_content_type(r);
+
+    rc = ngx_http_send_header(r);
+    if (rc == NGX_ERROR || rc > NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                "ngx_http_send_header fail, return code: %d", rc);
+        return rc;
+    }
+
+    return fken_send_reply_chunk(r, true,
+            output.str, output.len, false);
+}
+
+static ngx_int_t ngx_http_fastken_index_handler(ngx_http_request_t *r)
+{
     int param_count;
 	char body[1024];
     string_t cont;
@@ -549,42 +603,9 @@ static ngx_int_t ngx_http_fastken_index_handler(ngx_http_request_t *r)
         *(cont.str + cont.len) = '\0';
     }
 
-    //TODO: free file content
-    if (getFileContent(filename, &file_content, &file_size) != 0) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-
     param_count = http_parse_url_params(cont.str, cont.len,
         params, MAX_PARAM_COUNT);
-
-    logInfo("param_count: %d", param_count);
-    {
-        int i;
-        for (i=0; i<param_count; i++) {
-            logInfo("%s=%.*s", params[i].key, params[i].value_len, params[i].value);
-        }
-    }
-
-    out_content = file_content;
-    content_len = file_size;
-    r->headers_out.content_type.len = CONTENT_TYPE_HTML_LEN;
-    r->headers_out.content_type.data = (u_char *)CONTENT_TYPE_HTML_STR;
-    r->headers_out.content_length_n = content_len;
-    r->headers_out.status = NGX_HTTP_OK;
-
-    ngx_http_set_content_type(r);
-
-    rc = ngx_http_send_header(r);
-    if (rc == NGX_ERROR || rc > NGX_OK) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                "ngx_http_send_header fail, return code: %d", rc);
-        return rc;
-    }
-
-    rc = fken_send_reply_chunk(r, true,
-            out_content, content_len, true);
-    free(file_content);
-    return rc;
+    return fastken_index_do(r, params, param_count);
 }
 
 static void ngx_http_fastken_index_post_handler(ngx_http_request_t *r)
@@ -671,13 +692,18 @@ static ngx_int_t ngx_http_fastken_process_init(ngx_cycle_t *cycle)
 #endif
 	int result;
 
-
 	fprintf(stderr, "ngx_http_fastken_process_init pid=%d, "
             "client config filename: %s\n", getpid(), CLIENT_CONF_FILENAME);
     log_init();
 	if ((result=fken_client_init(&client, CLIENT_CONF_FILENAME)) != 0) {
 		return NGX_ERROR;
 	}
+
+    if ((result=load_index_template()) != 0) {
+		return NGX_ERROR;
+    }
+
+    logInfo("index_temp_node_array.count: %d", index_temp_node_array.count);
 
 	return NGX_OK;
 }
