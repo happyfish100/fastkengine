@@ -6,6 +6,7 @@
 #include "fastcommon/logger.h"
 #include "fastcommon/shared_func.h"
 #include "fastcommon/http_func.h"
+#include "fastcommon/local_ip_func.h"
 #include "fastken/fken_client.h"
 #include "template.h"
 
@@ -25,6 +26,9 @@
 
 #define PARAM_NAME_DISPLAY_ANSWER_STR  "display_answer"
 #define PARAM_NAME_DISPLAY_ANSWER_LEN  (sizeof(PARAM_NAME_DISPLAY_ANSWER_STR) - 1)
+
+#define PARAM_NAME_SERVER_IP_STR  "server_ip"
+#define PARAM_NAME_SERVER_IP_LEN  (sizeof(PARAM_NAME_SERVER_IP_STR) - 1)
 
 #define PARAM_NAME_VARS_STR    "vars"
 #define PARAM_NAME_VARS_LEN    (sizeof(PARAM_NAME_VARS_STR) - 1)
@@ -85,15 +89,18 @@ static string_t param_name_uname = {PARAM_NAME_UNAME_STR,
 static string_t uname_linux = {UNAME_LINUX_STR, UNAME_LINUX_LEN};
 static string_t uname_darwin = {UNAME_DARWIN_STR, UNAME_DARWIN_LEN};
 
+static string_t local_private_ip = {NULL, 0};
+
 static string_t param_name_answer = {PARAM_NAME_ANSWER_STR,
     PARAM_NAME_ANSWER_LEN};
 static string_t param_name_display_answer = {PARAM_NAME_DISPLAY_ANSWER_STR,
     PARAM_NAME_DISPLAY_ANSWER_LEN};
+static string_t param_name_server_ip = {PARAM_NAME_SERVER_IP_STR,
+    PARAM_NAME_SERVER_IP_LEN};
 
 static string_t string_none = {"none", 4};
 
 static char *ngx_http_fastken_set(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-//static ngx_int_t ngx_http_fastken_init(ngx_conf_t *cf);
 
 static ngx_int_t ngx_http_fastken_process_init(ngx_cycle_t *cycle);
 static void ngx_http_fastken_process_exit(ngx_cycle_t *cycle);
@@ -672,7 +679,7 @@ static ngx_int_t fastken_index_do(ngx_http_request_t *r, const char *body,
 
 	ngx_int_t rc;
     string_t output;
-    key_value_pair_t kvs[MAX_PARAM_COUNT + 2];
+    key_value_pair_t kvs[MAX_PARAM_COUNT + 8];
     key_value_array_t kv_array;
     string_t *question;
 
@@ -696,6 +703,9 @@ static ngx_int_t fastken_index_do(ngx_http_request_t *r, const char *body,
         fastken_add_param_to_kv_array(&kv_array, &param_name_display_answer,
                 &string_none);
     }
+
+    fastken_add_param_to_kv_array(&kv_array, &param_name_server_ip,
+            &local_private_ip);
 
     if (render_index_template(r, &kv_array, &output) != 0) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -843,6 +853,9 @@ static ngx_int_t ngx_http_fastken_process_init(ngx_cycle_t *cycle)
     if ((result=load_index_template()) != 0) {
 		return NGX_ERROR;
     }
+
+    local_private_ip.str = (char *)get_first_local_ip();
+    local_private_ip.len = strlen(local_private_ip.str);
 
     logInfo("index_temp_node_array.count: %d", index_temp_node_array.count);
 

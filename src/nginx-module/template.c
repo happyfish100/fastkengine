@@ -146,7 +146,7 @@ static int alloc_output_buffer(ngx_http_request_t *r,
     value_len = 0;
     kv_end = params->kv_pairs + params->count;
     for (kv=params->kv_pairs; kv<kv_end; kv++) {
-        value_len += kv->value.len;
+        value_len += 2 * kv->value.len;
     }
 
     buffer->length = 0;
