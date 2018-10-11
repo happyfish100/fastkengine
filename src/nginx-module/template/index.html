@@ -4,11 +4,37 @@
   <title>welcome to fastken</title>
   <style type="text/css">
      p,td {font:12px/20px arial,sans-serif;}
+     .hint {font:10px/16px arial,sans-serif;color:#A0A0A0;}
    </style>
+
+   <script language="javascript">
+
+String.prototype.trim = function() {
+    return this.replace(/(^\s*)|(\s*$)/g, "");
+}
+
+function doc_init()
+{
+    document.getElementById("question").focus();
+}
+
+function check_form(form)
+{
+    var q = document.getElementById("question");
+    q.value = q.value.trim();
+    if (q.value.length == 0) {
+        alert("哥们，请输入问题噻。");
+        q.focus();
+        return false;
+    }
+
+    return true;
+}
+   </script>
 </head>
 
-<body>
-<form action="/fastken/" method="POST">
+<body onload="doc_init()">
+<form action="/fastken/" method="POST" onsubmit="return check_form(this)">
 <table border="0" align="center">
 <tr height="100" align="center" valign="center">
 <td colspan="2">
@@ -22,6 +48,9 @@
 <select name="catalog">
   <option value="unix">Unix</option>
 </select>
+<span class="hint">
+&nbsp;&nbsp;&nbsp;&nbsp;目前只支持Unix问答哦。
+</span>
 </td>
 </tr>
 
@@ -29,9 +58,9 @@
 <td>操作系统：</td>
 <td>
 <select name="osname">
-  <option value="CentOS">CentOS</option>
-  <option value="Ubuntu">Ubuntu</option>
-  <option value="Darwin">Darwin</option>
+  <option value="CentOS">CentOS (Linux)</option>
+  <option value="Ubuntu">Ubuntu (Linux)</option>
+  <option value="Darwin">MacOS (Darwin)</option>
 </select>
 </td>
 </tr>
@@ -39,7 +68,7 @@
 <tr height="40">
 <td>你的问题： </td>
 <td>
-<input name="question" size="40" value="${question}">
+<input name="question" id="question" size="40" value="${question}">
 </td>
 </tr>
 
@@ -58,6 +87,10 @@ ${answer}
 </tr>
 </table>
 </form>
+<p class="hint" align="center">
+unix终端下可以直接使用命令行搜索问题，shell脚本下载链接：
+<a href="https://github.com/happyfish100/fastkengine/blob/master/src/shell/fastken.sh" target="_blank">fastken.sh</a>
+</span>
 <p align="center">
 powered by <a href="https://github.com/happyfish100/fastkengine" target="_blank">fastkengine</a>. &nbsp;&nbsp;
 京ICP备18051003号
