@@ -610,34 +610,41 @@ static inline void fastken_add_param_to_kv_array(key_value_array_t *kv_array,
 }
 
 static int fastken_index_format_vars(key_value_array_t *kv_array,
-        key_value_array_t *var_array)
+        key_value_array_t *var_array, string_t **osname)
 {
-    string_t *osname;
     string_t *uname;
 
-    osname = get_param(kv_array->kv_pairs, kv_array->count, &param_name_osname);
-    if (osname == NULL) {
+    *osname = get_param(kv_array->kv_pairs, kv_array->count, &param_name_osname);
+    if (*osname == NULL) {
         return ENOENT;
     }
 
-    if (fc_string_equal2(osname, OSNAME_CENTOS_STR, OSNAME_CENTOS_LEN) ||
-            fc_string_equal2(osname, OSNAME_UBUNTU_STR, OSNAME_UBUNTU_LEN))
+    if (fc_string_equal2(*osname, OSNAME_CENTOS_STR, OSNAME_CENTOS_LEN) ||
+            fc_string_equal2(*osname, OSNAME_UBUNTU_STR, OSNAME_UBUNTU_LEN))
     {
         uname = &uname_linux;
-    } else if (fc_string_equal2(osname, OSNAME_DARWIN_STR, OSNAME_DARWIN_LEN)) {
+    } else if (fc_string_equal2(*osname, OSNAME_DARWIN_STR, OSNAME_DARWIN_LEN)) {
         uname = &uname_darwin;
     } else {
         uname = &empty_string;
+        *osname = NULL;
     }
 
-    fastken_add_param_to_kv_array(var_array, &param_name_osname, osname);
+    fastken_add_param_to_kv_array(var_array, &param_name_osname, *osname);
     fastken_add_param_to_kv_array(var_array, &param_name_uname, uname);
     return 0;
 }
 
+static inline bool is_osname_valid(string_t *osname)
+{
+    return fc_string_equal2(osname, OSNAME_CENTOS_STR, OSNAME_CENTOS_LEN) ||
+        fc_string_equal2(osname, OSNAME_UBUNTU_STR, OSNAME_UBUNTU_LEN) ||
+        fc_string_equal2(osname, OSNAME_DARWIN_STR, OSNAME_DARWIN_LEN);
+}
+
 static int fastken_index_search(ngx_http_request_t *r,
-        key_value_array_t *kv_array,
-        const char *body, string_t *question)
+        key_value_array_t *kv_array, const char *body,
+        string_t *question, string_t **osname)
 {
     string_t output;
     key_value_array_t var_array;
@@ -653,7 +660,7 @@ static int fastken_index_search(ngx_http_request_t *r,
 
     var_array.kv_pairs = vars;
     var_array.count = 0;
-    if (fastken_index_format_vars(kv_array, &var_array) != 0) {
+    if (fastken_index_format_vars(kv_array, &var_array, osname) != 0) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
@@ -671,6 +678,60 @@ static int fastken_index_search(ngx_http_request_t *r,
     return NGX_OK;
 }
 
+static inline ngx_int_t set_header_cookie(ngx_http_request_t *r,
+        const char *name, const string_t *value)
+{
+#define MAX_AGE   (10 * 365 * 24 * 3600)
+#define HEADER_NAME_SET_COOKIE_STR "Set-Cookie"
+#define HEADER_NAME_SET_COOKIE_LEN (sizeof(HEADER_NAME_SET_COOKIE_STR) - 1)
+
+    BufferInfo buffer;
+    char date_str[32];
+    char buff[256];
+    time_t expires;
+    int len;
+
+    buffer.buff = date_str;
+    buffer.alloc_size = sizeof(date_str);
+
+    expires = time(NULL) + MAX_AGE;
+    format_http_date(expires, &buffer);
+
+    len = snprintf(buff, sizeof(buff), "%s=%.*s; Expires=%s; Path=/;",
+            name, value->len, value->str, buffer.buff);
+    logInfo("set cookie: %s", buff);
+    return set_http_header(r, HEADER_NAME_SET_COOKIE_STR,
+            "set-cookie", HEADER_NAME_SET_COOKIE_LEN,
+            buff, len);
+}
+
+static int get_cookie(ngx_http_request_t *r, const string_t *name,
+        string_t *value)
+{
+    ngx_table_elt_t **cookies;
+    u_char *equal;
+    ngx_uint_t i;
+    int key_len;
+
+    cookies = r->headers_in.cookies.elts;
+    logInfo("cookies count: %d", (int)r->headers_in.cookies.nelts);
+    for (i=0; i<r->headers_in.cookies.nelts; i++) {
+        equal = memchr(cookies[i]->value.data, '=', cookies[i]->value.len);
+        if (equal == NULL) {
+            continue;
+        }
+
+        key_len = equal - cookies[i]->value.data;
+        if (fc_string_equal2(name, (char *)cookies[i]->value.data, key_len)) {
+            value->str = (char *)(cookies[i]->value.data + key_len + 1);
+            value->len = cookies[i]->value.len - key_len - 1;
+            return 0;
+        }
+    }
+
+    return ENOENT;
+}
+
 static ngx_int_t fastken_index_do(ngx_http_request_t *r, const char *body,
         const KeyValuePairEx *params, const int param_count)
 {
@@ -682,7 +743,10 @@ static ngx_int_t fastken_index_do(ngx_http_request_t *r, const char *body,
     key_value_pair_t kvs[MAX_PARAM_COUNT + 8];
     key_value_array_t kv_array;
     string_t *question;
+    string_t temp;
+    string_t *cookie_osname;
 
+    /*
     logInfo("param_count: %d", param_count);
     {
         int i;
@@ -690,18 +754,41 @@ static ngx_int_t fastken_index_do(ngx_http_request_t *r, const char *body,
             logInfo("%s=%.*s", params[i].key, params[i].value_len, params[i].value);
         }
     }
+    */
 
     kv_array.kv_pairs = kvs;
     fastken_copy_params_to_kv_array(params, param_count, &kv_array);
 
+    cookie_osname = &temp;
+    if (get_cookie(r, &param_name_osname, cookie_osname) == 0) {
+        logInfo("get cookie: %s=%.*s", param_name_osname.str,  cookie_osname->len, cookie_osname->str);
+        if (!is_osname_valid(cookie_osname)) {
+            cookie_osname = NULL;
+        }
+    } else {
+        cookie_osname = NULL;
+    }
+
     question = get_param(kv_array.kv_pairs, param_count, &param_name_question);
     if (question != NULL && question->len > 0) {
-        if ((rc=fastken_index_search(r, &kv_array, body, question)) != NGX_OK) {
+        string_t *osname;
+        if ((rc=fastken_index_search(r, &kv_array, body, question,
+                        &osname)) != NGX_OK)
+        {
             return rc;
+        }
+        if (osname != NULL && !(cookie_osname != NULL &&
+                    fc_string_equal(osname, cookie_osname)))
+        {
+            set_header_cookie(r, "osname", osname);
         }
     } else {
         fastken_add_param_to_kv_array(&kv_array, &param_name_display_answer,
                 &string_none);
+        if (cookie_osname != NULL) {
+            fastken_add_param_to_kv_array(&kv_array, &param_name_osname,
+                    cookie_osname);
+        }
     }
 
     fastken_add_param_to_kv_array(&kv_array, &param_name_server_ip,
@@ -731,6 +818,7 @@ static ngx_int_t fastken_index_do(ngx_http_request_t *r, const char *body,
 static ngx_int_t ngx_http_fastken_index_handler(ngx_http_request_t *r)
 {
     int param_count;
+	char buff[1024];
 	char body[1024];
     string_t cont;
     KeyValuePairEx params[MAX_PARAM_COUNT];
@@ -754,7 +842,10 @@ static ngx_int_t ngx_http_fastken_index_handler(ngx_http_request_t *r)
         *(cont.str + cont.len) = '\0';
     }
 
-    param_count = http_parse_url_params(cont.str, cont.len,
+    memcpy(buff, cont.str, cont.len);
+    *(buff + cont.len) = '\0';
+
+    param_count = http_parse_url_params(buff, cont.len,
         params, MAX_PARAM_COUNT);
     return fastken_index_do(r, body, params, param_count);
 }
@@ -797,17 +888,12 @@ static ngx_int_t ngx_http_fastken_handler(ngx_http_request_t *r)
                 URI_INDEX_HTML_LEN) || (relative_path.len == 0) ||
             fc_string_equal2(&relative_path, "/", 1))
     {
-        logInfo("method: %d, uri: %.*s(HOME PAGE)", (int)r->method, (int)r->uri.len, r->uri.data);
-        logInfo("method: %d, args: %.*s", (int)r->method, (int)r->args.len, r->args.data);
-
         if ((r->method & NGX_HTTP_POST) != 0) {
             return ngx_http_fastken_read_body(r, ngx_http_fastken_index_post_handler);
         } else {
             return ngx_http_fastken_index_handler(r);
         }
     }
-
-    logInfo("uri: %.*s(%d)", (int)r->uri.len, r->uri.data, (int)r->uri.len);
 
     if (fc_string_equal2(&relative_path, URI_SEARCH_UNIX_STR,
                 URI_SEARCH_UNIX_LEN))
@@ -857,7 +943,7 @@ static ngx_int_t ngx_http_fastken_process_init(ngx_cycle_t *cycle)
     local_private_ip.str = (char *)get_first_local_ip();
     local_private_ip.len = strlen(local_private_ip.str);
 
-    logInfo("index_temp_node_array.count: %d", index_temp_node_array.count);
+    //logInfo("index_temp_node_array.count: %d", index_temp_node_array.count);
 
 	return NGX_OK;
 }

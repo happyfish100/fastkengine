@@ -151,8 +151,6 @@ static int alloc_output_buffer(ngx_http_request_t *r,
 
     buffer->length = 0;
     buffer->alloc_size = index_file_content.len + value_len;
-    logInfo("value_len: %d, alloc_size: %d", value_len, buffer->alloc_size);
-
     buffer->buff = (char *)ngx_palloc(r->pool, buffer->alloc_size);
     if (buffer->buff == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
@@ -177,7 +175,8 @@ static int check_realloc_output_buffer(ngx_http_request_t *r,
     while (buffer->alloc_size < expect_size) {
         buffer->alloc_size *= 2;
     }
-    logInfo("resize buff size to %d", buffer->alloc_size);
+    logInfo("expect_size: %d, resize buff size to %d",
+            expect_size, buffer->alloc_size);
 
     new_buff = (char *)ngx_palloc(r->pool, buffer->alloc_size);
     if (new_buff == NULL) {
@@ -199,8 +198,6 @@ static char *text_to_html(ngx_http_request_t *r, const string_t *value,
     const char *end;
     char *dest;
     char *buff_end;
-
-    logInfo("buffer length: %d, alloc_size: %d", buffer->length, buffer->alloc_size);
 
     dest = buffer->buff + buffer->length;
     buff_end = buffer->buff + buffer->alloc_size;
@@ -328,8 +325,7 @@ static int render_index_template(ngx_http_request_t *r,
     }
     buffer.length = p - buffer.buff;
 
-    logInfo("buffer length: %d, alloc_size: %d", buffer.length, buffer.alloc_size);
-
+    //logInfo("buffer length: %d, alloc_size: %d", buffer.length, buffer.alloc_size);
     output->str = buffer.buff;
     output->len = buffer.length;
     return 0;

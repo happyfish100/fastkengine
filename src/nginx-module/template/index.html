@@ -16,6 +16,9 @@ String.prototype.trim = function() {
 function doc_init()
 {
     document.getElementById("question").focus();
+    if ("${osname}" != "") {
+        document.getElementById("osname").value = "${osname}";
+    }
 }
 
 function check_form(form)
@@ -57,7 +60,7 @@ function check_form(form)
 <tr height="40">
 <td>操作系统：</td>
 <td>
-<select name="osname">
+<select name="osname" id="osname">
   <option value="CentOS">CentOS (Linux)</option>
   <option value="Ubuntu">Ubuntu (Linux)</option>
   <option value="Darwin">MacOS (Darwin)</option>
