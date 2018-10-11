@@ -1,58 +1,17 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>welcome to fastken</title>
+  <meta name=”keywords” content=”智能问答,问答系统,Unix操作,Unix命令,命令助手,工程师助手″>
+  <meta name=”description” content=”fastken智能问答系统，可以自然语言方式提问。目前提供了Unix助手，包括命令操作和问题解答”>
+  <title>fastken智能问答系统--工程师的好帮手</title>
   <style type="text/css">
      p,td {font:12px/20px arial,sans-serif;}
      .hint {font:10px/16px arial,sans-serif;color:#A0A0A0;}
    </style>
-
-   <script language="javascript">
-
-String.prototype.trim = function() {
-    return this.replace(/(^\s*)|(\s*$)/g, "");
-}
-
-function get_cookie(cname)
-{
-    var name = cname + "=";
-    var ca = document.cookie.split(';');
-    for(var i=0; i<ca.length; i++) {
-        var c = ca[i].trim();
-        if (c.indexOf(name) == 0) {
-            return c.substring(name.length, c.length);
-        }
-    }
-    return "";
-}
-
-function doc_init()
-{
-    document.getElementById("question").focus();
-
-    var osname = get_cookie("osname");
-    if (osname.length > 0) {
-        document.getElementById("osname").value = osname;
-    }
-}
-
-function check_form(form)
-{
-    var q = document.getElementById("question");
-    q.value = q.value.trim();
-    if (q.value.length == 0) {
-        alert("哥们，请输入问题噻。");
-        q.focus();
-        return false;
-    }
-
-    return true;
-}
-   </script>
 </head>
 
-<body onload="doc_init()">
-<form action="/fastken/" method="POST" onsubmit="return check_form(this)">
+<body onload="docInit()">
+<form action="/fastken/" method="POST" onsubmit="return checkForm(this)">
 <table border="0" align="center">
 <tr height="100" align="center" valign="center">
 <td colspan="2">
@@ -95,6 +54,9 @@ function check_form(form)
 <input type="submit" value="提交">
 </td>
 </tr>
+<tr height="20">
+<td colspan="2">&nbsp;</td>
+</tr>
 <tr height="120" id="answer" style="display:${display_answer};">
 <td>系统回答： </td>
 <td>
@@ -113,6 +75,66 @@ unix终端下可以直接使用命令行搜索问题，shell脚本下载链接�
 powered by <a href="https://github.com/happyfish100/fastkengine" target="_blank">fastkengine</a>. &nbsp;&nbsp;
 京ICP备18051003号
 </p>
+
+<script language="javascript">
+String.prototype.trim = function() {
+    return this.replace(/(^\s*)|(\s*$)/g, "");
+}
+
+function getCookie(cname)
+{
+    var name = cname + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0; i<ca.length; i++) {
+        var c = ca[i].trim();
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
+
+function moveCursorToTextEnd(id)
+{
+    var obj = document.getElementById(id);
+    var pos = obj.value.length;
+    if (obj.setSelectionRange) { //兼容火狐,谷歌
+        setTimeout(function() {
+                obj.setSelectionRange(pos, pos);
+                obj.focus();}
+                ,0);
+    } else if (obj.createTextRange) { //兼容IE
+        var rng = obj.createTextRange();
+        rng.move('character', pos);
+        rng.select();
+    } else {
+        obj.focus();
+    }
+}
+
+function docInit()
+{
+    moveCursorToTextEnd("question");
+
+    var osname = getCookie("osname");
+    if (osname.length > 0) {
+        document.getElementById("osname").value = osname;
+    }
+}
+
+function checkForm(form)
+{
+    var q = document.getElementById("question");
+    q.value = q.value.trim();
+    if (q.value.length == 0) {
+        alert("哥们，请输入问题噻。");
+        q.focus();
+        return false;
+    }
+
+    return true;
+}
+</script>
 </body>
 </html>
 <!-- host: ${server_ip} -->
