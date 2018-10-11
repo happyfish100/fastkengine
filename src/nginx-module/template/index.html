@@ -13,11 +13,26 @@ String.prototype.trim = function() {
     return this.replace(/(^\s*)|(\s*$)/g, "");
 }
 
+function get_cookie(cname)
+{
+    var name = cname + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0; i<ca.length; i++) {
+        var c = ca[i].trim();
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
+
 function doc_init()
 {
     document.getElementById("question").focus();
-    if ("${osname}" != "") {
-        document.getElementById("osname").value = "${osname}";
+
+    var osname = get_cookie("osname");
+    if (osname.length > 0) {
+        document.getElementById("osname").value = osname;
     }
 }
 
