@@ -24,3 +24,4 @@ perl -pi -e 's/\$\{question\}//g' $html_path/index.html
 perl -pi -e 's/\$\{answer\}//g' $html_path/index.html
 perl -pi -e 's/\$\{display_answer\}/none/g' $html_path/index.html
 perl -pi -e "s/\\\$\{server_ip\}/$local_ip/g" $html_path/index.html
+perl -pi -e "s/\\\$\{osname\}//g" $html_path/index.html
