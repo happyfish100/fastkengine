@@ -272,9 +272,11 @@
 
 [[question id=210]]
     创建 文件 [空]
+    修改 文件 时间
     touch
 
 [[answer]]
+ touch 用于创建空文件或者设置已存在文件的修改时间。
  [[cmd required/]] touch <filename>
 
 

@@ -55,6 +55,7 @@
 
 [[question id=50]]
  域名|主机 解析
+ nslookup|dig|host
 
 [[answer]]
   nslookup、dig 和 host 均可做域名/主机解析。命令格式：
@@ -105,5 +106,4 @@
 [[answer uname=Linux]]
  ss 比 netstat 效率更高，推荐使用ss。
  [[cmd/]] ss -an | grep -w 80 | grep ESTAB | grep tcp
-
 

@@ -198,7 +198,9 @@ static char *text_to_html(ngx_http_request_t *r, const string_t *value,
     const char *end;
     char *dest;
     char *buff_end;
+    bool space_count;
 
+    space_count = 0;
     dest = buffer->buff + buffer->length;
     buff_end = buffer->buff + buffer->alloc_size;
     end = value->str + value->len;
@@ -241,12 +243,16 @@ static char *text_to_html(ngx_http_request_t *r, const string_t *value,
                 *dest++ = ';';
                 break;
             case ' ':
-                *dest++ = '&';
-                *dest++ = 'n';
-                *dest++ = 'b';
-                *dest++ = 's';
-                *dest++ = 'p';
-                *dest++ = ';';
+                if (space_count == 0) {
+                    *dest++ = *p;
+                } else {
+                    *dest++ = '&';
+                    *dest++ = 'n';
+                    *dest++ = 'b';
+                    *dest++ = 's';
+                    *dest++ = 'p';
+                    *dest++ = ';';
+                }
                 break;
             case '\r':
                 break;  //igore \r
@@ -255,11 +261,15 @@ static char *text_to_html(ngx_http_request_t *r, const string_t *value,
                 *dest++ = 'b';
                 *dest++ = 'r';
                 *dest++ = '>';
-                *dest++ = '\n';
                 break;
             default:
                 *dest++ = *p;
                 break;
+        }
+        if (*p == ' ') {
+            space_count++;
+        } else {
+            space_count = 0;
         }
     }
 
