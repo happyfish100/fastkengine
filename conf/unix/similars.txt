@@ -36,7 +36,7 @@
 类型 型号 type
 信息 information info
 情况 状况 状态 status situation
-程序 脚本 命令 程式 program
+程序 脚本 命令 程式 操作 program
 可执行 可运行 runable executable
 二进制 binary
 用户组 分组 群组 group
@@ -82,7 +82,7 @@
 占用 占有 使用 用到 occupy
 负载 负荷 load
 时长 多长 多久 duration (how long)
-运行 执行 run
+运行 执行 run execute
 启动 开机 (start up)
 登录 登陆 login
 统计 汇总 statistics
@@ -99,7 +99,7 @@ vi vim
 粘贴 张贴 贴上 贴下 paste
 错乱 杂乱 混乱 凌乱 disorder
 网络 network
-本机 (local host)
+本机 本地 (local host)
 主机 服务器 机器 host server machine
 网卡 (network card) (net interface) (network interface)
 参数 parameter
@@ -130,3 +130,5 @@ vi vim
 打开 open
 预设 presupposition
 核心 core
+远程 remote
+其它 其他 别的 另外 other

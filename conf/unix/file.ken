@@ -156,6 +156,13 @@
 [[answer]]
   ln 用于创建链接，常用命令格式：
   [[cmd/]] ln -s <file> <target_link>
+  其中：file 为源文件，target_link 为生成的链接文件
+
+  例如：
+  ln -s /usr/lib/libfastcommon.so /usr/lib64/libfastcommon.so
+  /usr/lib/libfastcommon.so为动态库文件，/usr/lib64/libfastcommon.so为建立的符号链接。
+  注：在64位的CentOS或者RHEL下，系统搜索动态库时，默认不会搜索/usr/lib，而是搜索/usr/lib64。
+      解决方法：建立 /usr/lib64/目录下的符号链接即可。
 
   参数说明：
     -s 创建一个指向文件或目录的软（符号）链接

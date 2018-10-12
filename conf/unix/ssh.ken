@@ -1,0 +1,75 @@
+[[base id=1160000000]]
+
+[[question id=10]]
+ 远程|服务器 登录
+ ssh
+
+[[answer]]
+  ssh 用于登录服务器，命令格式：
+  [[cmd/]] ssh [options] [user@]hostname [command]
+  其中：
+    user 指定登录用户，不指定则使用当前用户名（也可以通过 -l 参数指定登录用户名）
+    hostname 使用主机名或者IP都可以
+    command 表示ssh登录主机后执行的命令
+
+  例如：
+    ssh yuqing@39.106.8.170
+
+  常用选项：
+    -l login_name：指定登录用户名，和 user@]hostname 的效果一样
+    -p port：指定服务器端口，sshd (ssh server)的默认端口为22，如果不是默认端口，需要用此参数指定，例如：
+      ssh -p 2222 yuqing@172.17.4.200
+
+
+[[question id=20]]
+ 远程 命令|执行
+ 其它 服务器 命令|执行
+
+[[answer]]
+  ssh 可执行远程命令（在指定服务器上执行命令），命令格式：
+  [[cmd/]] ssh [options] [user@]hostname <command>
+
+  例如：
+  ssh 172.17.4.200 ls -l
+
+
+[[question id=60]]
+ 远程 拷贝 [文件|目录]
+ 本机 拷贝 服务器 [文件|目录]
+ scp
+
+[[answer]]
+  scp 通过ssh协议在主机之间拷贝文件/目录，scp 和 cp 命令格式类似，只是支持指定远程文件/目录：
+  [[cmd/]] scp [options] [user@]host1:file1 ... [user@]host2:file2
+
+  注：文件名中带冒号，则为远程文件/目录，否则为本地文件/目录
+
+  将本机文件拷贝到服务器：
+    scp <file1> [file2 ...] [user@]<hostname>:[filepath]
+
+  友情提示： 对于远程文件，主机名后面一定要跟随冒号，否则就拷贝到本地了，切记切记！
+
+  例如：
+  将 myfile 拷贝到 172.17.4.200 上 yuqing 的HOME目录下：
+    scp myfile yuqing@172.17.4.200:
+
+  拷贝目录 mypath 及其子目录 到服务器：
+    scp -r mypath yuqing@172.17.4.200:/home/yuqing/
+
+
+  将本机文件拷贝到服务器：
+    scp [user@]<hostname>:[filename] <filepath>
+
+  将服务器172.17.4.200 上的serverfile 拷贝到本机当前目录：
+    scp yuqing@172.17.4.200:serverfile .
+
+  拷贝服务器目录 mypath 及其子目录 到 本地目录：
+    scp -r yuqing@172.17.4.200:/home/yuqing/mypath /home/yuqing/data/
+
+
+  常用选项：
+    -r recursion 级联拷贝目录，拷贝整个目录时需要指定本参数
+    -P port 指定服务器端口，sshd (ssh server)的默认端口为22，如果不是默认端口，需要用此参数指定
+    -l limit 限制拷贝使用的带宽，单位为：KB/s
+    -o ssh_option ssh选项，详情参见：man scp
+
