@@ -119,7 +119,7 @@ function formatAnswer(oa)
     }
 
     na = oa;
-    na = na.replace(/\[\[(\/)?cmd(\s+required)?\s*(\/)?\]\]/g, "");
+    na = na.replace(/\[\[(\/)?cmd(\s+required)?\s*(\/)?\]\](<br>)?/g, "");
     return na;
 }
 

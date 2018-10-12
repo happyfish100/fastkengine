@@ -11,7 +11,8 @@
 #include "question_index.h"
 
 typedef struct kengine_global_variables {
-    KeywordHashtableContext kh_context;
+    KeywordHashtableContext kh_context;  //keyword hashtable
+    KeywordHashtableContext lh_context;  //link hashtable
     KeywordIndexContext ki_context;
     char data_path[MAX_PATH_SIZE];
     int question_index_hashtable_buckets;

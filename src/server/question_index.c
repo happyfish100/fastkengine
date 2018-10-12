@@ -190,7 +190,7 @@ void question_index_destroy(KeywordIndexContext *context)
     context->htable.buckets = NULL;
 }
 
-int question_index_add(KeywordIndexContext *context,
+static int question_index_add(KeywordIndexContext *context,
         const KeywordArray *keywords, AnswerEntry *answer)
 {
     QuestionBuffer qentry;

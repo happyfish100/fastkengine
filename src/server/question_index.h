@@ -42,9 +42,6 @@ extern "C" {
 
     void question_index_destroy(KeywordIndexContext *context);
 
-    int question_index_add(KeywordIndexContext *context,
-            const KeywordArray *keywords, AnswerEntry *answer);
-
     int question_index_adds(KeywordIndexContext *context,
             const KeywordRecords *records, AnswerEntry *answer);
 

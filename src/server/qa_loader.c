@@ -99,6 +99,26 @@ static inline void keyword_records_normalize(KeywordRecords *results)
     }
 }
 
+int link_hashtable_adds(const KeywordRecords *records)
+{
+    const KeywordArray *p;
+    const KeywordArray *end;
+    int r;
+    int result = 0;
+
+    end = records->rows + records->count;
+    for (p=records->rows; p<end; p++) {
+        if (p->count != 1) {
+            continue;
+        }
+
+        //TODO add to link hashtable
+        logInfo("single keyword== %.*s", p->keywords[0].len, p->keywords[0].str);
+        r = 0;
+    }
+    return result;
+}
+
 static int load_question_answers(QAReaderContext *reader)
 {
     int result;
@@ -114,6 +134,10 @@ static int load_question_answers(QAReaderContext *reader)
         keyword_records_unique(&entry.questions);
 
         logInfo("line: %d, questions count: %d", __LINE__, entry.questions.count);
+
+        if ((result=link_hashtable_adds(&entry.questions)) != 0) {
+            break;
+        }
 
         if ((result=question_index_adds(&g_server_vars.ki_context,
             &entry.questions, &entry.answer)) != 0)
