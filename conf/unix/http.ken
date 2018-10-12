@@ -1,0 +1,27 @@
+
+[[base id=1170000000]]
+
+[[question id=10]]
+ 获取|下载 网页|url
+ 获取|下载 网络|线上 资源|内容|文件
+ 网站 资源|内容|文件
+ curl
+
+[[answer]]
+  curl 用于获取网络资源，命令格式：
+  [[cmd/]] curl [options] <URL>
+
+  注意：如果不带-o <filename> 参数，获取的内容将直接输出到终端。
+        下载二进制文件时，请指定 -o <filename> 选项。
+
+  例如：
+     curl http://www.fastken.com/
+
+
+  常用选项：
+    -o, --output <filename>： 将资源内容写入指定文件
+    -d, --data <data>： 将data通过HTTP POST给web server
+    -I, --head：只获取HTTP header，不要资源内容 
+    -v, --verbose：显示详细的调试信息，将输出发送和接收到的HTTP header
+    -x, --proxy [protocol://]host[:port]：指定代理服务器
+    -s, --silent：安静模式，此时不显示下载进度或者出错信息。通常不会使用此选项，除非特殊目的。

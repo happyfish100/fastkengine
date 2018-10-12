@@ -2,7 +2,7 @@
 [[base id=1140000000]]
 
 [[question id=10]]
- 打包|解包 文件
+ 打包|解包 [文件]
  tar
 
 [[answer]]
@@ -23,7 +23,7 @@
 
 
 [[question id=20]]
- 压缩|解压 文件
+ 压缩|解压 [文件]
  gzip
  gunzip
  bzip2

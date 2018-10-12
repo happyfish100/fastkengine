@@ -67,6 +67,7 @@
 
 [[question id=50]]
  排序 文本|内容
+ sort
 
 [[answer]]
  sort 对文件按行排序，默认为升序，命令格式：
