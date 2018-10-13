@@ -6,7 +6,7 @@
 
 [[answer]]
   unix下使用curl命令获取fastken.sh，下载命令：
-  [[cmd/]] curl -o fastken.sh http://www.fastken.com/fastken/resource/fastken.sh && chmod +x fastken.sh
+  [[cmd/]] curl -o fastken.sh http://www.fastken.com/resource/fastken.sh && chmod +x fastken.sh
 
   下载完成后，你可以使用fastken.sh提问了，命令格式如下：
   [[cmd/]] ./fastken.sh <question>
@@ -18,6 +18,7 @@
   sudo mv fastken.sh /usr/bin && sudo chmod +x /usr/bin/fastken.sh
   sudo ln -s /usr/bin/fastken.sh /usr/bin/fastken
   [[/cmd]]
+
   执行如上两个命令行后，你可以用如下两种方式之一提问：
   [[cmd/]] fastken.sh <question>
   [[cmd/]] fastken <question>
@@ -28,6 +29,7 @@
   sudo mv fastken.sh /usr/local/bin && sudo chmod +x /usr/local/bin/fastken.sh
   sudo ln -s /usr/local/bin/fastken.sh /usr/local/bin/fastken
   [[/cmd]]
+
   执行如上两个命令行后，你可以用如下两种方式之一提问：
   [[cmd/]] fastken.sh <question>
   [[cmd/]] fastken <question>
