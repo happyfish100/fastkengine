@@ -86,6 +86,7 @@ static int hashtable_init(KeywordIndexContext *context, const int capacity)
     }
 
     memset(context->htable.buckets, 0, bytes);
+    context->list = NULL;
     return 0;
 }
 
@@ -103,7 +104,7 @@ static KeywordIndexHashEntry *hashtable_find(KeywordIndexContext *context,
         if (fc_string_equal(&current->question.q, question)) {
             return current;
         }
-        current = current->next;
+        current = current->hnext;
     }
 
     return NULL;
@@ -138,8 +139,12 @@ static KeywordIndexHashEntry *hashtable_insert(KeywordIndexContext *context,
 
     hash_code = simple_hash(question->str, question->len);
     index = hash_code % context->htable.capacity;
-    hentry->next = context->htable.buckets[index];
+    hentry->hnext = context->htable.buckets[index];
     context->htable.buckets[index] = hentry;
+
+    hentry->lnext = context->list;
+    context->list = hentry;
+
     return hentry;
 }
 

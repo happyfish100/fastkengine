@@ -11,31 +11,41 @@ int main(int argc, char *argv[])
     const char *config_filename;
     string_t question;
     FKenAnswerArray answer_array;
-    key_value_pair_t conditions[FKEN_MAX_CONDITION_COUNT];
-    int condition_count;
+    key_value_pair_t vars[FKEN_MAX_CONDITION_COUNT];
+    int var_count;
+    int answer_format;
     int result;
     int i;
 
     if (argc < 3) {
-        fprintf(stderr, "Usage: %s <config_filename> <question>\n",
-                argv[0]);
+        fprintf(stderr, "Usage: %s <config_filename> <question> [format]\n"
+                "\t format: text or html, default is text\n\n", argv[0]);
         return EINVAL;
     }
     config_filename = argv[1];
     FC_SET_STRING(question, argv[2]);
+    if (argc > 3) {
+        if (strcasecmp(argv[3], "html") == 0) {
+            answer_format = FKEN_ANSWER_FORMAT_HTML;
+        } else {
+            answer_format = FKEN_ANSWER_FORMAT_TEXT;
+        }
+    } else {
+        answer_format = FKEN_ANSWER_FORMAT_TEXT;
+    }
 
     log_init();
     if ((result=fken_client_init(&client, config_filename)) != 0)  {
         return result;
     }
 
-    FC_SET_STRING(conditions[0].key, "uname");
-    FC_SET_STRING(conditions[0].value, "Darwin");
-    FC_SET_STRING(conditions[1].key, "osname");
-    FC_SET_STRING(conditions[1].value, "FreeBSD");
-    condition_count = 2;
+    FC_SET_STRING(vars[0].key, "uname");
+    FC_SET_STRING(vars[0].value, "Darwin");
+    FC_SET_STRING(vars[1].key, "osname");
+    FC_SET_STRING(vars[1].value, "FreeBSD");
+    var_count = 2;
     if ((result=fken_client_question_search(&client, &question,
-                    conditions, condition_count, &answer_array)) != 0)
+                    vars, var_count, answer_format, &answer_array)) != 0)
     {
         printf("result: %d\n", result);
         return result;

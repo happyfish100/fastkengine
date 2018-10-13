@@ -949,14 +949,14 @@ static int combine_answer_string(QAReaderContext *context,
                         fp, entry) == 0)
             {
                 if ((result=fast_buffer_append_string2(context->buffer,
-                                &fp->answer)) != 0)
+                                &fp->answer.origin)) != 0)
                 {
                     return result;
                 }
             }
         }
 
-        if ((result=fast_mpool_strdup_ex(context->mpool, &entry->answer,
+        if ((result=fast_mpool_strdup_ex(context->mpool, &entry->answer.origin,
                 context->buffer->data, context->buffer->length)) != 0)
         {
             return result;
@@ -1016,7 +1016,7 @@ static int qa_reader_combine_answer(QAReaderContext *context,
         printf("\n answer::::::\n");
         printf("$$$$$$$$$$$$$$$$\n");
         printf("%.*s",
-                FC_PRINTF_STAR_STRING_PARAMS(p->answer));
+                FC_PRINTF_STAR_STRING_PARAMS(p->answer.origin));
         printf("$$$$$$$$$$$$$$$$\n");
     }
     */
@@ -1176,7 +1176,7 @@ static int qa_reader_set_answer(QAReaderContext *context,
         return result;
     }
 
-    entry->answer = *answer;
+    entry->answer.origin = *answer;
     entry->conditions.count = attributes.count;
     entry->conditions.kv_pairs = condition_holder->kv_pairs;
 
@@ -1322,11 +1322,13 @@ int qa_reader_next(QAReaderContext *context, QAReaderEntry *entry)
 
     entry->answer.id = question_id;
 
+    /*
         logWarning("file: "__FILE__", line: %d, "
                 "%s tag in file: %s, tag: %.*s",
                 __LINE__, TAG_ANSWER_STR, context->filename,
                 QA_SHOW_CONTENT_LENGTH((int)(atag.end - atag.start)),
                 atag.start);
+    */
 
     question.len = atag.start - question.str;
     qr = qa_reader_parse_question(context, &question, entry);

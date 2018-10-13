@@ -491,13 +491,14 @@ static void get_answer_ids_string(FKenAnswerArray *answer_array, char *buff)
 
 static int fastken_search_do(ngx_http_request_t *r, string_t *question,
         const char *body, key_value_array_t *var_array,
-        FKenAnswerArray *answer_array)
+        const int answer_format, FKenAnswerArray *answer_array)
 {
     int result;
     char answer_ids[32 * FKEN_MAX_ANSWER_COUNT];
 
     if ((result=fken_client_question_search(&client, question,
-                    var_array->kv_pairs, var_array->count, answer_array)) != 0)
+                    var_array->kv_pairs, var_array->count,
+                    answer_format, answer_array)) != 0)
     {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                 "question_search result: %d", result);
@@ -576,7 +577,7 @@ static void ngx_http_fastken_search_handler(ngx_http_request_t *r)
     var_array.kv_pairs = vars;
     var_array.count = var_count;
     if (fastken_search_do(r, question, body, &var_array,
-                &answer_array) != 0)
+                FKEN_ANSWER_FORMAT_TEXT, &answer_array) != 0)
     {
         ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
         return;
@@ -665,7 +666,7 @@ static int fastken_index_search(ngx_http_request_t *r,
     }
 
     if (fastken_search_do(r, question, body, &var_array,
-                &answer_array) != 0)
+                FKEN_ANSWER_FORMAT_HTML, &answer_array) != 0)
     {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }

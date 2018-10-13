@@ -33,7 +33,7 @@ int fken_client_init(FKenClient *client, const char *config_filename);
 void fken_client_destroy(FKenClient *client);
 
 int fken_client_question_search(FKenClient *client, const string_t *question,
-    const key_value_pair_t *vars, const int var_count,
+    const key_value_pair_t *vars, const int var_count, const int answer_format,
     FKenAnswerArray *answer_array);
 
 #ifdef __cplusplus

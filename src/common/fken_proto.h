@@ -33,6 +33,7 @@ typedef struct fken_proto_question_kv_entry {
 typedef struct fken_proto_question_search_req_header {
     unsigned char kv_count;
     unsigned char question_len;
+    unsigned char answer_format;
     char question[0];
 } FKENProtoQuestionSearchReqHeader;
 

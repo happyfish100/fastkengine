@@ -44,7 +44,10 @@ typedef struct condition_array {
 
 typedef struct condition_answer_entry {
     ConditionArray conditions;
-    string_t answer;
+    struct {
+        string_t origin;
+        string_t for_html;
+    } answer;
 } ConditionAnswerEntry;
 
 typedef struct condition_answer_array {

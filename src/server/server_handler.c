@@ -147,6 +147,7 @@ static int fken_proto_deal_question_search(struct fast_task_info *task,
     QASearchResultArray results;
     string_t question;
     int kv_count;
+    int answer_format;
 
     if ((result=FKEN_PROTO_CHECK_MIN_BODY_LEN(task, request, response,
                     sizeof(FKENProtoQuestionSearchReqHeader))) != 0)
@@ -170,6 +171,7 @@ static int fken_proto_deal_question_search(struct fast_task_info *task,
         return EINVAL;
     }
     question.str = req_header->question;
+    answer_format = req_header->answer_format;
 
     vars.kv_pairs = kv_pairs;
     if ((result=parse_answer_vars(task, request, response,
@@ -178,7 +180,9 @@ static int fken_proto_deal_question_search(struct fast_task_info *task,
         return result;
     }
 
-    if ((result=question_search(&question, &vars, &results)) != 0) {
+    if ((result=question_search(&question, &vars, answer_format,
+                    &results)) != 0)
+    {
         if (result != ENOENT) {
             return result;
         }

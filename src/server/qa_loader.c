@@ -99,26 +99,6 @@ static inline void keyword_records_normalize(KeywordRecords *results)
     }
 }
 
-int link_hashtable_adds(const KeywordRecords *records)
-{
-    const KeywordArray *p;
-    const KeywordArray *end;
-    int r;
-    int result = 0;
-
-    end = records->rows + records->count;
-    for (p=records->rows; p<end; p++) {
-        if (p->count != 1) {
-            continue;
-        }
-
-        //TODO add to link hashtable
-        logInfo("single keyword== %.*s", p->keywords[0].len, p->keywords[0].str);
-        r = 0;
-    }
-    return result;
-}
-
 static int load_question_answers(QAReaderContext *reader)
 {
     int result;
@@ -135,21 +115,51 @@ static int load_question_answers(QAReaderContext *reader)
 
         logInfo("line: %d, questions count: %d", __LINE__, entry.questions.count);
 
-        if ((result=link_hashtable_adds(&entry.questions)) != 0) {
-            break;
-        }
-
         if ((result=question_index_adds(&g_server_vars.ki_context,
             &entry.questions, &entry.answer)) != 0)
         {
             break;
         }
-        logInfo("line: %d, questions count: %d\n", __LINE__, entry.questions.count);
     }
 
     return result;
 }
  
+static int add_answer_slinks(FastBuffer *buffer)
+{
+    KeywordIndexContext *context;
+    KeywordIndexHashEntry *hentry;
+    ConditionAnswerEntry *p;
+    ConditionAnswerEntry *end;
+    ConditionAnswerArray *answer_array;
+    int result;
+
+    context = &g_server_vars.ki_context;
+    hentry = context->list;
+    while (hentry != NULL) {
+        answer_array = &hentry->answer.condition_answers;
+        end = answer_array->entries + answer_array->count;
+        for (p=answer_array->entries; p<end; p++) {
+            if ((result=word_segment_add_slinks(&p->answer.origin,
+                            hentry->answer.id, buffer)) != 0)
+            {
+                return result;
+            }
+
+            if ((result=fast_mpool_strdup_ex(&context->string_allocator,
+                            &p->answer.for_html, buffer->data,
+                            buffer->length)) != 0)
+            {
+                return result;
+            }
+        }
+
+        hentry = hentry->lnext;
+    }
+
+    return 0;
+}
+
 int qa_loader_init(char **filenames, const int count)
 {
     int result;
@@ -180,7 +190,11 @@ int qa_loader_init(char **filenames, const int count)
         if (result != 0) {
             break;
         }
-   }
+    }
+
+    if (result == 0) {
+        result = add_answer_slinks(&buffer);
+    }
 
     fast_buffer_destroy(&buffer);
     return result;

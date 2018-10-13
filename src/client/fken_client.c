@@ -123,7 +123,7 @@ static inline int fken_client_check_conn(FKenClient *client)
 
 static int question_search_req_pack(FKenClient *client,
         const string_t *question, const key_value_pair_t *vars,
-        const int var_count, int *buff_len)
+        const int var_count, const int answer_format, int *buff_len)
 {
     FKENProtoQuestionSearchReqHeader *req_header;
     const key_value_pair_t *kv_pair;
@@ -162,6 +162,7 @@ static int question_search_req_pack(FKenClient *client,
 
     req_header->question_len = question->len;
     req_header->kv_count = var_count;
+    req_header->answer_format = answer_format;
     memcpy(req_header->question, question->str, question->len);
 
     kv_end = vars + var_count;
@@ -247,7 +248,7 @@ static int question_search_resp_unpack(FKenClient *client,
 }
 
 int fken_client_question_search(FKenClient *client, const string_t *question,
-    const key_value_pair_t *vars, const int var_count,
+    const key_value_pair_t *vars, const int var_count, const int answer_format,
     FKenAnswerArray *answer_array)
 {
 	int result;
@@ -261,7 +262,7 @@ int fken_client_question_search(FKenClient *client, const string_t *question,
     }
 
     if ((result=question_search_req_pack(client, question, vars,
-                    var_count, &req_len)) != 0)
+                    var_count, answer_format, &req_len)) != 0)
     {
         return result;
     }

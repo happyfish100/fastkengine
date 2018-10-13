@@ -8,6 +8,8 @@
 #include "server_global.h"
 #include "wordsegment.h"
 
+#define MAX_KEYWORD_CHARS   16   //Note: an english word as a char
+
 int word_segment_next_word(const char **pp, const char *end, string_t *ch)
 {
     ch->str = (char *)*pp;
@@ -572,7 +574,6 @@ static int word_segment_output(CombineKeywordInfo *keywords, const int count,
 static int word_segment_do_split(WordSegmentArray *output)
 {
 #define MAX_KEYWORDS  (MAX_KEYWORDS_COUNT * MAX_KEYWORDS_COUNT)
-#define MAX_KEYWORD_CHARS   16   //Note: an english word as a char
 
     string_t word;
     string_t chrs[MAX_KEYWORD_CHARS];
@@ -657,4 +658,123 @@ void word_segment_free_result(WordSegmentArray *array)
         free(array->holder.str);
         array->holder.str = NULL;
     }
+}
+
+static int word_segment_find_slink_keyword(const char **p,
+        const char *end, const int64_t current_id, string_t *keyword)
+{
+    string_t word;
+    string_t chrs[MAX_KEYWORD_CHARS];
+    KeywordHashEntry *hentry;
+    QAEntry qa;
+    const char *save_point;
+    int chr_count;
+
+    while (*p < end) {
+        keyword->str = (char *)*p;
+        if (word_segment_next_word(p, end, &word) != 0) {
+            continue;
+        }
+
+        chrs[0] = word;
+        chr_count = 1;
+        save_point = *p;
+
+        while (true) {
+            logInfo("finding: %.*s(%d), chr_count: %d",
+                    (int)(*p - keyword->str), keyword->str, (int)(*p - keyword->str), chr_count);
+            if ((hentry=keyword_hashtable_find_ex(&g_server_vars.kh_context,
+                            chrs, chr_count)) != NULL)
+            {
+                if (hentry->similar.len > 0) {
+                    if (question_index_find_single_keyword(&g_server_vars.
+                                ki_context, &hentry->similar, &qa) == 0)
+                    {
+                        if (qa.answer->id != current_id) {
+                            keyword->len = (char *)*p - keyword->str;
+                            return 0;
+                        }
+                    }
+                }
+            } else {
+                break;
+            }
+
+            while ((*p < end) && (**p == ' ')) {
+                (*p)++;
+            }
+            if (word_segment_next_word(p, end, &word) != 0) {
+                break;
+            }
+
+            if (chr_count == MAX_KEYWORD_CHARS) {
+                logWarning("file: "__FILE__", line: %d, "
+                        "too many keyword chars exceed %d, keywords: %.*s",
+                        __LINE__, MAX_KEYWORD_CHARS, (int)(*p - keyword->str), keyword->str);
+                break;
+            }
+            chrs[chr_count++] = word;
+       }
+
+        *p = save_point;  //rewind
+    }
+
+    return ENOENT;
+}
+
+int word_segment_add_slinks(const string_t *origin,
+        const int64_t current_id, FastBuffer *output)
+{
+#define SLINK_START_TAG_STR  "[[slink]]"
+#define SLINK_START_TAG_LEN (sizeof(SLINK_START_TAG_STR) - 1)
+
+#define SLINK_CLOSE_TAG_STR  "[[/slink]]"
+#define SLINK_CLOSE_TAG_LEN (sizeof(SLINK_CLOSE_TAG_STR) - 1)
+
+    const char *p;
+    const char *end;
+    const char *start;
+    string_t keyword;
+    int result;
+
+    fast_buffer_clear(output);
+    p = origin->str;
+    end = origin->str + origin->len;
+    while (p < end) {
+        start = p;
+        if (word_segment_find_slink_keyword(&p, end, current_id,
+                    &keyword) != 0)
+        {
+            if ((result=fast_buffer_append_buff(output, start,
+                            end - start)) != 0)
+            {
+                return result;
+            }
+            break;
+        }
+
+        if ((result=fast_buffer_append_buff(output, start,
+                        keyword.str - (char *)start)) != 0)
+        {
+            return result;
+        }
+
+        if ((result=fast_buffer_append_buff(output, SLINK_START_TAG_STR,
+                        SLINK_START_TAG_LEN)) != 0)
+        {
+            return result;
+        }
+        if ((result=fast_buffer_append_string2(output,
+                        &keyword)) != 0)
+        {
+            return result;
+        }
+        if ((result=fast_buffer_append_buff(output, SLINK_CLOSE_TAG_STR,
+                        SLINK_CLOSE_TAG_LEN)) != 0)
+        {
+            return result;
+        }
+    }
+
+    return 0;
 }

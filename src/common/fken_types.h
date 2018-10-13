@@ -4,6 +4,9 @@
 #include <time.h>
 #include "fastcommon/common_define.h"
 
+#define FKEN_ANSWER_FORMAT_TEXT     0
+#define FKEN_ANSWER_FORMAT_HTML     1
+
 #define FKEN_MAX_ANSWER_COUNT      5
 #define FKEN_MAX_CONDITION_COUNT   5
 

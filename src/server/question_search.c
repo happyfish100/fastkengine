@@ -264,7 +264,7 @@ static bool match_answer_conditions(const key_value_array_t *vars,
 }
 
 static int match_answers(QAArray *qa_array, const key_value_array_t *vars,
-        QASearchResultArray *results)
+        const int answer_format, QASearchResultArray *results)
 {
     QAEntry *p;
     QAEntry *end;
@@ -280,7 +280,11 @@ static int match_answers(QAArray *qa_array, const key_value_array_t *vars,
         for (ca = ca_last; ca >= p->answer->condition_answers.entries; ca--) {
             if (match_answer_conditions(vars, &ca->conditions)) {
                 dest->question = p->question;
-                dest->answer = &ca->answer;
+                if (answer_format == FKEN_ANSWER_FORMAT_HTML) {
+                    dest->answer = &ca->answer.for_html;
+                } else {
+                    dest->answer = &ca->answer.origin;
+                }
                 dest->id = p->answer->id;
                 dest++;
                 break;
@@ -312,7 +316,7 @@ static void print_keyword_records(KeywordRecords *records)
 }
 
 int question_search(const string_t *question, const key_value_array_t *vars,
-        QASearchResultArray *results)
+        const int answer_format, QASearchResultArray *results)
 {
     int result;
     WordSegmentArray ws_out;
@@ -383,5 +387,5 @@ int question_search(const string_t *question, const key_value_array_t *vars,
            results->scan_count, results->matched_count);
 
     word_segment_free_result(&ws_out);
-    return match_answers(&qa_array, vars, results);
+    return match_answers(&qa_array, vars, answer_format, results);
 }

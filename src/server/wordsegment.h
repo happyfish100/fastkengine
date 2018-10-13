@@ -10,6 +10,7 @@
 #include "fastcommon/common_define.h"
 #include "fastcommon/fast_mblock.h"
 #include "fastcommon/fast_mpool.h"
+#include "fastcommon/fast_buffer.h"
 #include "keyword_types.h"
 #include "keyword_iterator.h"
 
@@ -39,6 +40,9 @@ extern "C" {
     int word_segment_split(const string_t *input, WordSegmentArray *output);
 
     void word_segment_free_result(WordSegmentArray *array);
+
+    int word_segment_add_slinks(const string_t *origin,
+            const int64_t current_id, FastBuffer *output);
 
 #ifdef __cplusplus
 }

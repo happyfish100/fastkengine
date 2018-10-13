@@ -20,7 +20,8 @@ typedef struct question_buffer {
 typedef struct question_index_hash_entry {
     QuestionEntry question;
     AnswerEntry answer;
-    struct question_index_hash_entry *next;
+    struct question_index_hash_entry *hnext;  //for hashtable
+    struct question_index_hash_entry *lnext;  //for list
 } KeywordIndexHashEntry;
 
 typedef struct question_index_hash_table {
@@ -30,6 +31,7 @@ typedef struct question_index_hash_table {
 
 typedef struct question_index_context {
     KeywordIndexHashTable htable;
+    KeywordIndexHashEntry *list;
     struct fast_mblock_man hentry_allocator;
     struct fast_mpool_man  string_allocator;
 } KeywordIndexContext;
@@ -47,6 +49,15 @@ extern "C" {
 
     int question_index_find(KeywordIndexContext *context,
             const KeywordArray *keywords, QAEntry *qa);
+
+    static inline int question_index_find_single_keyword(
+            KeywordIndexContext *context, const string_t *keyword, QAEntry *qa)
+    {
+        KeywordArray karray;
+        karray.count = 1;
+        karray.keywords[0] = *keyword;
+        return question_index_find(context, &karray, qa);
+    }
 
     int question_index_key_length(const KeywordArray *keywords);
 

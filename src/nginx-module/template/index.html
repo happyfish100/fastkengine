@@ -11,7 +11,7 @@
 </head>
 
 <body onload="docInit()">
-<form action="/fastken/" method="POST" onsubmit="return checkForm(this)">
+<form name="f" action="/fastken/" method="POST" onsubmit="return checkForm(this)">
 <table border="0" align="center">
 <tr height="100" align="center" valign="center">
 <td colspan="2">
@@ -22,7 +22,7 @@
 <tr height="40">
 <td>问题分类：</td>
 <td>
-<select name="catalog">
+<select name="catalog" id="catalog">
   <option value="unix">Unix助手</option>
 </select>
 <span class="hint">
@@ -68,12 +68,17 @@
 </form>
 <p class="hint" align="center">
 unix终端下可以直接使用命令行搜索问题，shell脚本下载链接：
-<a href="https://github.com/happyfish100/fastkengine/blob/master/src/shell/fastken.sh" target="_blank">fastken.sh</a>
+<a href="https://github.com/happyfish100/fastkengine/blob/master/src/shell/fastken.sh">fastken.sh</a>
 </span>
 <p align="center">
 powered by <a href="https://github.com/happyfish100/fastkengine" target="_blank">fastkengine</a>. &nbsp;&nbsp;
 京ICP备18051003号
 </p>
+<form name="h" action="/fastken/" method="POST">
+<input type="hidden" name="catalog" value="unix">
+<input type="hidden" name="osname" value="">
+<input type="hidden" name="question" value="">
+</form>
 
 <script language="javascript">
 String.prototype.trim = function() {
@@ -111,6 +116,15 @@ function moveCursorToTextEnd(id)
     }
 }
 
+function doSearch(question)
+{
+    var form = document.forms["h"];
+    form.elements["catalog"].value = document.getElementById("catalog").value;
+    form.elements["osname"].value = document.getElementById("osname").value;
+    form.elements["question"].value = question;
+    form.submit();
+}
+
 function formatAnswer(oa)
 {
     var na;
@@ -120,6 +134,7 @@ function formatAnswer(oa)
 
     na = oa;
     na = na.replace(/\[\[(\/)?cmd(\s+required)?\s*(\/)?\]\](<br>)?/g, "");
+    na = na.replace(/\[\[slink\]\](.*?)\[\[\/slink\]\]/g, "<a href=\"#\" onclick=\"doSearch('$1')\">$1</a>");
     return na;
 }
 
