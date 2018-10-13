@@ -10,7 +10,8 @@
 
 #define MAX_KEYWORD_CHARS   16   //Note: an english word as a char
 
-int word_segment_next_word(const char **pp, const char *end, string_t *ch)
+int word_segment_next_word(const char **pp, const char *end, string_t *ch,
+        const bool silence)
 {
     ch->str = (char *)*pp;
     if (*pp >= end) {
@@ -51,7 +52,7 @@ int word_segment_next_word(const char **pp, const char *end, string_t *ch)
         *pp += 3;
         return 0;
     } else {
-        if (**pp != ' ') {
+        if (**pp != ' ' && !silence) {
             logWarning("file: "__FILE__", line: %d, "
                     "invalid character: %c(0x%02x)",
                     __LINE__, **pp, ((unsigned char)**pp) & 0xFF);
@@ -341,10 +342,10 @@ static void word_segment_combine_nearby_keywords(ComboKeywordGroup *group)
         }
     }
 
-    logInfo("combined count ===== %d", combined.count);
+    //logInfo("combined count ===== %d", combined.count);
     while (combined.count > 0) {
         combine_nearby_two_keywords(group, &combined, &single);
-        logInfo("combined count ===== %d", combined.count);
+        //logInfo("combined count ===== %d", combined.count);
     }
 }
 
@@ -454,12 +455,14 @@ static int word_segment_output(CombineKeywordInfo *keywords, const int count,
 
     qsort(keywords, count, sizeof(CombineKeywordInfo), compare_offset);
 
+    /*
     logInfo("keyword count: %d", count);
     for (i=0; i<count; i++) {
         logInfo("offset: %d, %.*s(%d)", keywords[i].offset.start,
                 FC_PRINTF_STAR_STRING_PARAMS(keywords[i].karray.keywords[0]),
                 keywords[i].karray.keywords[0].len);
     }
+    */
 
     p = keywords;
     end = keywords + count;
@@ -563,7 +566,6 @@ static int word_segment_output(CombineKeywordInfo *keywords, const int count,
             p = save_point = end;  \
             break;  \
         } \
-        logInfo("FOUND kEYWORD: %.*s", (int)(p - start), start);     \
         kinfo->offset.start = start - output->holder.str; \
         kinfo->offset.end = p - output->holder.str;       \
         kinfo->karray.keywords[0] = hentry->similar;      \
@@ -592,7 +594,7 @@ static int word_segment_do_split(WordSegmentArray *output)
     end = output->holder.str + output->holder.len;
     while (p < end) {
         start = p;
-        if (word_segment_next_word(&p, end, &word) != 0) {
+        if (word_segment_next_word(&p, end, &word, false) != 0) {
             continue;
         }
 
@@ -601,8 +603,10 @@ static int word_segment_do_split(WordSegmentArray *output)
         save_point = p;
 
         while (true) {
+            /*
             logInfo("finding: %.*s(%d), chr_count: %d",
                     (int)(p - start), start, (int)(p - start), chr_count);
+                    */
             if ((hentry=keyword_hashtable_find_ex(&g_server_vars.kh_context,
                             chrs, chr_count)) != NULL)
             {
@@ -614,7 +618,7 @@ static int word_segment_do_split(WordSegmentArray *output)
             while ((p < end) && (*p == ' ')) {
                 p++;
             }
-            if (word_segment_next_word(&p, end, &word) != 0) {
+            if (word_segment_next_word(&p, end, &word, false) != 0) {
                 break;
             }
 
@@ -631,7 +635,7 @@ static int word_segment_do_split(WordSegmentArray *output)
     }
 
     key_count = kinfo - keywords;
-    logInfo("found keyword key_count: %d", key_count);
+    //logInfo("found keyword key_count: %d", key_count);
     return word_segment_output(keywords, key_count, output);
 }
 
@@ -672,7 +676,7 @@ static int word_segment_find_slink_keyword(const char **p,
 
     while (*p < end) {
         keyword->str = (char *)*p;
-        if (word_segment_next_word(p, end, &word) != 0) {
+        if (word_segment_next_word(p, end, &word, true) != 0) {
             continue;
         }
 
@@ -681,8 +685,10 @@ static int word_segment_find_slink_keyword(const char **p,
         save_point = *p;
 
         while (true) {
+            /*
             logInfo("finding: %.*s(%d), chr_count: %d",
                     (int)(*p - keyword->str), keyword->str, (int)(*p - keyword->str), chr_count);
+                    */
             if ((hentry=keyword_hashtable_find_ex(&g_server_vars.kh_context,
                             chrs, chr_count)) != NULL)
             {
@@ -703,7 +709,7 @@ static int word_segment_find_slink_keyword(const char **p,
             while ((*p < end) && (**p == ' ')) {
                 (*p)++;
             }
-            if (word_segment_next_word(p, end, &word) != 0) {
+            if (word_segment_next_word(p, end, &word, true) != 0) {
                 break;
             }
 

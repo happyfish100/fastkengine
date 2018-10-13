@@ -411,7 +411,7 @@ static int expand_combined_keywords(const string_t *input,
             continue;
         }
 
-        logInfo("combined keyword==== %.*s", FC_PRINTF_STAR_STRING_PARAMS(*keyword));
+        //logInfo("combined keyword==== %.*s", FC_PRINTF_STAR_STRING_PARAMS(*keyword));
         keyword++;
     }
 
@@ -725,7 +725,7 @@ static int qa_reader_parse_question(QAReaderContext *context,
             continue;
         }
 
-        logInfo("lines==== %.*s", FC_PRINTF_STAR_STRING_PARAMS(line));
+        //logInfo("lines==== %.*s", FC_PRINTF_STAR_STRING_PARAMS(line));
 
         parse_a_question(context, &line, &records);
         if (entry->questions.count + records.count > MAX_KEYWORDS_ROWS) {
@@ -1305,7 +1305,7 @@ int qa_reader_next(QAReaderContext *context, QAReaderEntry *entry)
     question.str = qtag.next;
 
     question_id += context->base_id;
-    logInfo("question_id===== %"PRId64, question_id);
+    //logInfo("question_id===== %"PRId64, question_id);
 
 
     result = qa_reader_next_tag(context, &atag);

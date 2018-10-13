@@ -1,0 +1,33 @@
+
+[[base id=1180000000]]
+
+[[question id=10]]
+下载|使用 fastken
+
+[[answer]]
+  unix下使用curl命令获取fastken.sh，下载命令：
+  [[cmd/]] curl -o fastken.sh http://www.fastken.com/fastken/resource/fastken.sh && chmod +x fastken.sh
+
+  下载完成后，你可以使用fastken.sh提问了，命令格式如下：
+  [[cmd/]] ./fastken.sh <question>
+  注意：此时运行fastken.sh一定要带上路径如 ./fastken.sh，否则会提示找不到程序。
+
+[[answer uname=Linux]]
+  为了方便你的使用，建议将 fastken.sh 放到 /usr/bin下，命令如下：
+  [[cmd]]
+  sudo mv fastken.sh /usr/bin && sudo chmod +x /usr/bin/fastken.sh
+  sudo ln -s /usr/bin/fastken.sh /usr/bin/fastken
+  [[/cmd]]
+  执行如上两个命令行后，你可以用如下两种方式之一提问：
+  [[cmd/]] fastken.sh <question>
+  [[cmd/]] fastken <question>
+
+[[answer uname=Darwin]]
+  为了方便你的使用，建议将 fastken.sh 放到 /usr/local/bin下，命令如下：
+  [[cmd]]
+  sudo mv fastken.sh /usr/local/bin && sudo chmod +x /usr/local/bin/fastken.sh
+  sudo ln -s /usr/local/bin/fastken.sh /usr/local/bin/fastken
+  [[/cmd]]
+  执行如上两个命令行后，你可以用如下两种方式之一提问：
+  [[cmd/]] fastken.sh <question>
+  [[cmd/]] fastken <question>

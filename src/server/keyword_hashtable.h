@@ -75,9 +75,6 @@ extern "C" {
     KeywordHashEntry *keyword_hashtable_find_ex(KeywordHashtableContext *context,
             const string_t *chs, const int count);
 
-    int keyword_hashtable_add_keywords(KeywordHashtableContext *context,
-            const KeywordArray *keywords);
-
     void keyword_hashtable_destroy(KeywordHashtableContext *context);
 
     static inline int keyword_hashtable_count(KeywordHashtableContext *context)

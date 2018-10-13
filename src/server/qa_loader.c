@@ -75,8 +75,11 @@ static void keywords_to_similar(KeywordArray *karray)
     string_t *end;
     const string_t *similar;
 
+    //logInfo("count==: %d", karray->count);
     end = karray->keywords + karray->count;
     for (p = karray->keywords; p < end; p++) {
+        //logInfo("keyword===: %.*s", p->len, p->str);
+
         similar = keyword_to_similar(p);
         if (similar == NULL) {
             FC_SET_STRING_NULL(*p);
@@ -113,7 +116,7 @@ static int load_question_answers(QAReaderContext *reader)
         keyword_records_normalize(&entry.questions);
         keyword_records_unique(&entry.questions);
 
-        logInfo("line: %d, questions count: %d", __LINE__, entry.questions.count);
+        //logInfo("line: %d, questions count: %d", __LINE__, entry.questions.count);
 
         if ((result=question_index_adds(&g_server_vars.ki_context,
             &entry.questions, &entry.answer)) != 0)
@@ -174,6 +177,12 @@ int qa_loader_init(char **filenames, const int count)
 
     end = filenames + count;
     for (pp=filenames; pp<end; pp++) {
+        /*
+        if (strstr(*pp, "fastken.ken") == NULL) {
+            continue;
+        }
+        logInfo("filename: %s", *pp);
+        */
         result = qa_reader_init(&reader, &g_server_vars.kh_context.
                 string_allocator, &buffer, *pp);
 

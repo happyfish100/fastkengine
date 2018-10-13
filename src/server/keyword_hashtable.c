@@ -171,12 +171,14 @@ KeywordHashEntry *keyword_hashtable_insert_ex(KeywordHashtableContext *context,
     FC_SET_STRING_NULL(empty);
     i = 0;
     while (p < end) {
-        if (word_segment_next_word(&p, end, &ch) != 0) {
+        if (word_segment_next_word(&p, end, &ch, false) != 0) {
             continue;
         }
 
-        logInfo("word[%d]: %.*s, last: %d",
+        /*
+        logInfo("keyword_hashtable insert word[%d]: %.*s, last: %d",
                 i, ch.len, ch.str, p == end);
+                */
 
         if ((hentry=insert_char(context, htable, ++i, &ch,
                         (p == end) ? similar : &empty, keyword)) == NULL)
@@ -198,19 +200,21 @@ KeywordHashEntry *keyword_hashtable_find(KeywordHashtableContext *context,
     const char *end;
     KeywordHashtable **htable;
     KeywordHashEntry *hentry;
+    //int i = 0;
 
     htable = &context->top;
     p = keyword->str;
     end = keyword->str + keyword->len;
 
-    int i = 0;
     while (p < end) {
-        if (word_segment_next_word(&p, end, &ch) != 0) {
+        if (word_segment_next_word(&p, end, &ch, true) != 0) {
             continue;
         }
 
+        /*
         logInfo("finding WORD[%d]: %.*s, last: %d",
                 i++, ch.len, ch.str, p == end);
+                */
 
         hentry = hashtable_find(*htable, &ch);
         if (hentry == NULL) {
@@ -237,17 +241,19 @@ KeywordHashEntry *keyword_hashtable_find_ex(KeywordHashtableContext *context,
     const string_t *end;
     KeywordHashtable **htable;
     KeywordHashEntry *hentry;
+    //int i = 0;
 
     htable = &context->top;
     p = chs;
     end = chs + count;
 
-    int i = 0;
     while (p < end) {
 
+        /*
         logInfo("finding WORD[%d]: %.*s(%d), last: %d",
                 i++, FC_PRINTF_STAR_STRING_PARAMS(*p),
                 p->len, p == end);
+                */
 
         hentry = hashtable_find(*htable, p);
         if (hentry == NULL) {
@@ -428,26 +434,4 @@ void keyword_hashtable_destroy(KeywordHashtableContext *context)
     fast_mblock_destroy(&context->hentry_allocator);
     fast_mblock_destroy(&context->htable_allocator);
     fast_mpool_destroy(&context->string_allocator);
-}
-
-int keyword_hashtable_add_keywords(KeywordHashtableContext *context,
-        const KeywordArray *keywords)
-{
-    int result;
-    const string_t *key;
-    const string_t *end;
-
-    result = 0;
-    end = keywords->keywords + keywords->count;
-    for (key=keywords->keywords; key<end; key++) {
-        if ((result=keyword_hashtable_insert(context, key, key)) != 0) {
-            if (result == EINVAL || result == EEXIST) {
-                result = 0;
-                continue;
-            }
-            break;
-        }
-    }
-
-    return result;
 }

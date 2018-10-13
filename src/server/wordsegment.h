@@ -26,7 +26,7 @@ extern "C" {
 #endif
 
     int word_segment_next_word(const char **pp, const char *end,
-            string_t *ch);
+            string_t *ch, const bool silence);
 
     void word_segment_normalize(const string_t *input, string_t *output);
 
